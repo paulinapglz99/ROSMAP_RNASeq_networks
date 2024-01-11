@@ -217,9 +217,8 @@ explo.plot(myPCA, samples = c(1,2), plottype = "scores",
            factor = "cogdx")  #o ceradsc?
 dev.off()
 
-###########################HASTA AQUI VOY ###########################
-
 #################SOLVE BIASES######################################################
+
 library(EDASeq)
 
 #1) filter low count genes.
@@ -227,17 +226,38 @@ library(EDASeq)
 #Filtering those genes with average CPM below 1, would be different
 #to filtering by those with average counts below 1. 
 
-countMatrixFiltered <- filtered.data(FPKM_exprots, factor = "cogdx",
+countMatrixFiltered <- filtered.data(FPKM_exprots, 
+                                    factor = "cogdx",
                                     norm = FALSE, 
                                     depth = NULL, 
-                                    method = 1, cpm = 0,
+                                    method = 1,
+                                    cpm = 0,
                                     p.adj = "fdr")
 
-#17077 features are to be kept for differential expression analysis with filtering method 1
+#14992 features are to be kept for differential expression analysis with filtering method 1
 
-myannot <- t(myannot)
+###########################HASTA AQUI VOY ###########################
 
-myannot <- myannot %>% 
-  filter(ensembl_gene_id%in%rownames(countMatrixFiltered))
+#Filter again myannot 
+
+myannot <- t(myannot) %>% 
+  as.data.frame()
+
+myannot <- filter(myannot, ensembl_gene_id %in% rownames(countMatrixFiltered))
+
+#NOISeq needs annotation in t() (don't really get why, but this works like this)
+
+myannot <- t(myannot) %>% 
+  as.data.frame() 
+
+colnames(myannot) <- myannot[1,]
+
+#all names must match
+
+mydataEDA <- newSeqExpressionSet(counts = as.matrix(countMatrixFiltered),
+  featureData = data.frame(myannot, row.names = myannot$ensembl_gene_id),
+  phenoData = data.frame(RNA_seq_metadata, row.names=RNA_seq_metadata$barcode))
+
+
 
 
