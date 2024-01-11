@@ -119,16 +119,65 @@ noiseqData <- readData(data = FPKM_exprots,
                        factors = RNA_seq_metadata,                 #variables indicating the experimental group for each sample
                        length =  myannot["length",])               #gene length
 
+###########################HASTA AQUI VOY ###########################
+
 #1)check expression bias per subtype
 
-mycountsbio = dat(noiseqData,
-                  type = "countsbio",
-                  factor = "subtype")
+#Obtain the likely counts of genes, organized by subtype,
+#from the noiseqData object
+
+
+mycountsbio <- dat(noiseqData, 
+                  type =  "countsbio",
+                  norm = T, 
+                  factor = NULL)
+#Plot 
 
 #patients with repeated measures
-
 png("CountsOri.png")
+explo.plot(mycountsbio, plottype = "boxplot", samples = 1:5)
+dev.off()
 
-explo.plot(mycountsbio, plottype = "boxplot",samples = 1:5)
+#2)check for low count genes
+png("lowcountsOri.png")
+explo.plot(mycountsbio, plottype = "barplot", samples = 1:5)
+dev.off()
 
-##Next script is 2.dis_mat_coexpre.R
+#Histogram of row means
+
+png("lowCountThres.png")
+hist(rowMeans(cpm(FPKM_exprots,log=T)),
+     ylab="genes",
+     xlab="mean of log CPM",
+     col="gray")
+abline(v=0,col="red")
+dev.off()
+
+#3)check for transcript composition bias
+
+#each sample s is compared to a reference r (which can be arbitrarily chosen).
+#by computing M values=log2(counts = countsr). 
+
+#Confidence intervals for the M median is computed by bootstrapping.
+#If the median of M values for each comparison is not in the CI, the deviation
+# of the sample is significant, therefore, normalization is needed 
+
+mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
+
+#[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 525_120515"
+
+#[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
+
+table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+# 11    610 
+
+#Plot for Mvalues
+
+png("MvaluesOri.png")
+explo.plot(mycd,samples=sample(1:ncol(FPKM_exprots),10))
+dev.off()
+
+
