@@ -44,33 +44,37 @@ dim(myannot)
 #filter transcripts without annotation
 
 myannot <- myannot %>% 
-  dplyr::filter(gene_biotype == "protein_coding" | hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
+  dplyr::filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
   distinct(ensembl_gene_id, .keep_all = TRUE) # Keeps only unique rows based on the ensembl_gene_id column
 
 #Sort myannot's ensembl_gene_id column
 myannot <- myannot[order(myannot$ensembl_gene_id), ]
 
 dim(myannot)
-#[1] 37963     8  #37963 full annotated protein coding genes with 8 characteristics, difference of 11447 annotated genes :c
+#[[1] 18848     8  #18848 full annotated protein coding genes with 8 characteristics, difference of 30562 annotated genes
 
-#Filter count matrix to have only values that match ensembl_gene_id in the myannot dataframe.
+#Filter count matrix to have only values that match ensembl_gene_id in the myannot dataframe in a new object
 
 FPKM_exprots <- FPKM %>%
-  filter(FPKM$gene_id %in% myannot$ensembl_gene_id)
+  filter(FPKM$gene_id %in% myannot$ensembl_gene_id) %>% 
+  as.data.frame() 
 
-#Ordena la columna gene_id de FPKM_exprots en base a los valores ordenados de ensembl_gene_id:
+#Sorts the gene_id column of FPKM_exprots based on the sorted values of ensembl_gene_id:
+
 FPKM_exprots <- FPKM_exprots[match(myannot$ensembl_gene_id, FPKM_exprots$gene_id), ] 
 
 dim(FPKM_exprots)
-#[1] 37963   623  #37963 protein coding genes from 622 specimenIDs, now annotation and gene counts match
+#[1] 18848   623  #18848 protein coding genes from 622 specimenIDs, now annotation and gene counts match in order
 
 #read metadata
 RNA_seq_metadata <- vroom::vroom(file = "/datos/rosmap/metadata/ROSMAP_filtered_metadata_forRNAseq.csv")
 
-#I will delete 2 non-necessary columns for now
+#I will delete 2 non-necessary columns for now and make sure it converts to data.frame 
 
-RNA_seq_metadata$individualID <- NULL
-RNA_seq_metadata$msex <- NULL
+RNA_seq_metadata <- RNA_seq_metadata %>% 
+  dplyr::select(-individualID, -msex) %>% 
+  as.data.frame()
+
 dim(RNA_seq_metadata)
 #[1] 622   3  #622 individualIDs and specimenIDs and 3 characteristics
 
@@ -80,48 +84,40 @@ dim(RNA_seq_metadata)
 pacman::p_load("NOISeq", 
                "edgeR")
 
-#assign design experiment format
-
 #The lengths of RNA_seq_metadata$specimenID and colnames(FPKM_exprots) must be the same for the noiseq::readData function
 #They actually do at this point [622]
 
 #for the factor format
 #the order of the elements of the factor must coincide with the order of the samples (columns)
-# in the expression data provided.
-
-#note: row number in factor must match with number of cols in data ("FPKM_exprots"). 
-
-MAY DELETE 
+# in the expression data provided. Row number in factor must match with number of cols in data ("FPKM_exprots"). 
 
 # Get indexes to reorder RNA_seq_metadata$specimenID
-#specimenID_positions <- match(colnames(FPKM_exprots)[-1], RNA_seq_metadata$specimenID)
+specimenID_positions <- match(colnames(FPKM_exprots)[-1], RNA_seq_metadata$specimenID)
 
 # Use indexes to reorder RNA_seq_metadata$specimenID
 RNA_seq_metadata$specimenID <- RNA_seq_metadata$specimenID[specimenID_positions]
 names(RNA_seq_metadata$specimenID) <- colnames(FPKM_exprots)[-1] # sorted according to the order of colnames(FPKM_exprots)
 
-#
-
-FPKM_exprots <- as.data.frame(FPKM_exprots)
+#Assign gene_id rownames to rows in count data
 
 rownames(FPKM_exprots) <- FPKM_exprots$gene_id
 
+#And delete column
+
 FPKM_exprots <- FPKM_exprots[,-1]
 
-RNA_seq_metadata <- as.data.frame(RNA_seq_metadata)
+#NOISeq needs annotation in t() (don't really get why, but this works like this)
 
 myannot <- t(myannot)
 colnames(myannot) <- myannot[1,]
+
+#Convert to a NOIseq object
 
 noiseqData <- readData(data = FPKM_exprots, 
                        gc = myannot["percentage_gene_gc_content",],  #%GC in myannot
                        biotype = myannot["gene_biotype",],          #biotype
                        factors = RNA_seq_metadata,                 #variables indicating the experimental group for each sample
                        length =  myannot["length",])               #gene length
-
-
-#Meticulously verify that the sample names in FPKM_exprots (excluding the first column), RNA_seq_metadata$specimenID,
-#and any other relevant data frames/objects are identical.
 
 #1)check expression bias per subtype
 
