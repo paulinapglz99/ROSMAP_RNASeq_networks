@@ -119,19 +119,16 @@ noiseqData <- readData(data = FPKM_exprots,
                        factors = RNA_seq_metadata,                 #variables indicating the experimental group for each sample
                        length =  myannot["length",])               #gene length
 
-###########################HASTA AQUI VOY ###########################
-
 #1)check expression bias per subtype
 
 #Obtain the likely counts of genes, organized by subtype,
 #from the noiseqData object
 
-
 mycountsbio <- dat(noiseqData, 
                   type =  "countsbio",
                   norm = T, 
                   factor = NULL)
-#Plot 
+#Plots
 
 #patients with repeated measures
 png("CountsOri.png")
@@ -179,5 +176,68 @@ table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 png("MvaluesOri.png")
 explo.plot(mycd,samples=sample(1:ncol(FPKM_exprots),10))
 dev.off()
+
+#4)check for length & GC bias
+#A cubic spline regression model is fitted. Both the model p-value and the coefficient
+# of determination (R2) are shown. If the model p-value is significant and R2 value is
+# high (more than 70%), the expression depends on the feature
+
+myGCcontent <- dat(noiseqData,
+                   k = 0, type = "GCbias",
+                   factor = "ceradsc")
+
+#[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "GC content bias detection is to be computed for:"
+#[1] "1" "2" "3" "4"
+
+
+png("GCbiasOri.png",width=1000)
+explo.plot(myGCcontent, samples = NULL, toplot = "global")
+dev.off()
+
+#The GC-content of each gene does not change from sample to sample, so it can be expected to
+#have little effect on differential expression analyses to a first approximation
+
+
+mylenBias <- dat(noiseqData, k = 0, type = "lengthbias",
+                 factor = "subtype")
+
+png("lengthbiasOri.png",width=1000)
+par(mfrow=c(1,5))
+sapply(1:5,function(x) explo.plot(mylenBias, samples = x))
+dev.off()
+#BUT, since the gene has the same length in all your samples, there is no need to divide by the gene length
+
+#5) check for batch effect
+
+myPCA = dat(noiseqData, type = "PCA", norm = F, logtransf = F)
+
+png("PCA_Ori.png")
+explo.plot(myPCA, samples = c(1,2), plottype = "scores",
+           factor = "cogdx")  #o ceradsc?
+dev.off()
+
+###########################HASTA AQUI VOY ###########################
+
+#################SOLVE BIASES######################################################
+library(EDASeq)
+
+#1) filter low count genes.
+#CPM=(counts/fragments sequenced)*one million.
+#Filtering those genes with average CPM below 1, would be different
+#to filtering by those with average counts below 1. 
+
+countMatrixFiltered <- filtered.data(FPKM_exprots, factor = "cogdx",
+                                    norm = FALSE, 
+                                    depth = NULL, 
+                                    method = 1, cpm = 0,
+                                    p.adj = "fdr")
+
+#17077 features are to be kept for differential expression analysis with filtering method 1
+
+myannot <- t(myannot)
+
+myannot <- myannot %>% 
+  filter(ensembl_gene_id%in%rownames(countMatrixFiltered))
 
 
