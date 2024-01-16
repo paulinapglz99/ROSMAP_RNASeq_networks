@@ -1,9 +1,6 @@
 #Script for preprocessing (annot) and QC of gene expression data with NOISeq package
-
 #paulinapglz.99@gmail.com
-
 #Here we perform:
-
 ## Data preparation
 ## Quality Control & bias removal
 
@@ -12,7 +9,7 @@ pacman::p_load('dplyr',
 
 ############################## A. Get the data ############################## 
 
-#Read normalized data
+#Read expression data
 #This file was generated in 1.MatchFPKMandClinicalMetadata.R
 
 FPKM <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_new161223.csv') #counts for cogdx = 1, 2, 3, 4 and 5
@@ -46,12 +43,18 @@ dim(myannot)
 myannot <- myannot %>% 
   dplyr::filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
   distinct(ensembl_gene_id, .keep_all = TRUE) # Keeps only unique rows based on the ensembl_gene_id column
+dim(myannot)
+#[1] 18848     8  #Filtered annotation has 18848 genes
 
-#Sort myannot's ensembl_gene_id column
+########################### SURE THIS IS NOT NECESSARY, MAY PROBE LATELY#############################
+#Sort myannot's ensembl_gene_id column for NOISeq purposes
 myannot <- myannot[order(myannot$ensembl_gene_id), ]
 
 dim(myannot)
-#[[1] 18848     8  #18848 full annotated protein coding genes with 8 characteristics, difference of 30562 annotated genes
+#[1] 18848     8  #18848 full annotated protein coding genes with 8 characteristics, difference of 30562 annotated genes
+
+########################### SURE THIS IS NOT NECESSARY, MAY PROBE LATELY#############################
+
 
 #Filter count matrix to have only values that match ensembl_gene_id in the myannot dataframe in a new object
 
@@ -77,7 +80,6 @@ RNA_seq_metadata <- RNA_seq_metadata %>%
 
 dim(RNA_seq_metadata)
 #[1] 622   3  #622 individualIDs and specimenIDs and 3 characteristics
-
 
 ################## C. CHECK BIASES ########################################################
 
@@ -132,12 +134,12 @@ mycountsbio <- dat(noiseqData,
 
 #patients with repeated measures
 png("CountsOri.png")
-explo.plot(mycountsbio, plottype = "boxplot", samples = 1:5)
+explo.plot(mycountsbio, plottype = "boxplot", samples = 1:10)
 dev.off()
 
 #2)check for low count genes
 png("lowcountsOri.png")
-explo.plot(mycountsbio, plottype = "barplot", samples = 1:5)
+explo.plot(mycountsbio, plottype = "barplot", samples = 1:10)
 dev.off()
 
 #Histogram of row means
@@ -152,7 +154,7 @@ dev.off()
 
 #3)check for transcript composition bias
 
-#each sample s is compared to a reference r (which can be arbitrarily chosen).
+#each sample "s" is compared to a reference "r" (which can be arbitrarily chosen).
 #by computing M values=log2(counts = countsr). 
 
 #Confidence intervals for the M median is computed by bootstrapping.
@@ -166,10 +168,12 @@ mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
 #[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
+mycd_table <- table(mycd@dat)
+
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
-# 11    610 
+#12    609 
 
 #Plot for Mvalues
 
@@ -178,6 +182,7 @@ explo.plot(mycd,samples=sample(1:ncol(FPKM_exprots),10))
 dev.off()
 
 #4)check for length & GC bias
+
 #A cubic spline regression model is fitted. Both the model p-value and the coefficient
 # of determination (R2) are shown. If the model p-value is significant and R2 value is
 # high (more than 70%), the expression depends on the feature
@@ -190,31 +195,54 @@ myGCcontent <- dat(noiseqData,
 #[1] "GC content bias detection is to be computed for:"
 #[1] "1" "2" "3" "4"
 
+#Residuals:
+#  Min      1Q  Median      3Q     Max 
+#-9.5011 -1.5303 -0.0613  1.3300  6.4901 
 
 png("GCbiasOri.png",width=1000)
-explo.plot(myGCcontent, samples = NULL, toplot = "global")
+explo.plot(myGCcontent,
+           samples = NULL,
+           toplot = "global")
 dev.off()
 
 #The GC-content of each gene does not change from sample to sample, so it can be expected to
 #have little effect on differential expression analyses to a first approximation
 
+mylengthbias <- dat(noiseqData, 
+                 k = 0,
+                 type = "lengthbias",
+                 factor = "ceradsc")
 
-mylenBias <- dat(noiseqData, k = 0, type = "lengthbias",
-                 factor = "subtype")
 
-png("lengthbiasOri.png",width=1000)
-par(mfrow=c(1,5))
-sapply(1:5,function(x) explo.plot(mylenBias, samples = x))
+#[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Length bias detection information is to be computed for:"
+#[1] "1" "2" "3" "4"
+
+#Residuals:
+# Min      1Q  Median      3Q     Max 
+#-29.152  -2.099  -0.478   1.663  83.628 
+
+#Plot length bias
+
+png("lengthbiasOri.png")
+explo.plot(mylengthbias, 
+           samples = NULL, 
+           toplot = "global")
 dev.off()
-#BUT, since the gene has the same length in all your samples, there is no need to divide by the gene length
 
 #5) check for batch effect
 
-myPCA = dat(noiseqData, type = "PCA", norm = F, logtransf = F)
+myPCA <- dat(noiseqData,
+             type = "PCA", 
+             norm = F,
+             logtransf = F)
+
+#Plot PCA
 
 png("PCA_Ori.png")
-explo.plot(myPCA, samples = c(1,2), plottype = "scores",
-           factor = "cogdx")  #o ceradsc?
+explo.plot(myPCA, samples = c(1,2),
+           plottype = "scores",
+           factor = "ceradsc")
 dev.off()
 
 #################SOLVE BIASES######################################################
@@ -256,8 +284,4 @@ colnames(myannot) <- myannot[1,]
 
 mydataEDA <- newSeqExpressionSet(counts = as.matrix(countMatrixFiltered),
   featureData = data.frame(myannot, row.names = myannot$ensembl_gene_id),
-  phenoData = data.frame(RNA_seq_metadata, row.names=RNA_seq_metadata$barcode))
-
-
-
-
+  phenoData = data.frame(RNA_seq_metadata, row.names=RNA_seq_metadata$specimenID))
