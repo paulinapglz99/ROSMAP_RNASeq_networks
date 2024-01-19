@@ -284,3 +284,30 @@ mydataEDA <- newSeqExpressionSet(
                            row.names = myannot$ensembl_gene_id),
   phenoData = data.frame(factors,
                          row.names=factors$specimen_ID))
+
+#order for less bias
+
+#for gc content
+gcFull <- withinLaneNormalization(mydataEDA, 
+                                  "percentage_gene_gc_content", which = "full")#corrects GC bias 
+
+#for length
+lFull <- withinLaneNormalization(gcFull, "length", which = "full")#corrects length bias 
+
+#TMM normalization
+
+fullfullTMM <-NOISeq::tmm(normCounts(lFull), long = 1000, lc = 0, k = 0)
+#norm.counts <- betweenLaneNormalization(normCounts(lFull),
+# which = "median", offset = FALSE)
+#FAILED PASSED 
+#
+
+noiseqData = NOISeq::readData(data = fullfullTMM, factors=factors)
+
+#cd has to preceed ARSyN or won't work
+mycd <- NOISeq::dat(noiseqData,type="cd",norm=TRUE)
+
+#[1] "Warning: 95 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 525_120515"
+
+table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
