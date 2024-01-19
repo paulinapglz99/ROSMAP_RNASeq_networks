@@ -76,6 +76,8 @@ expression <- expression %>%
 myannot <- expression %>% 
   dplyr::select(1:7)
 
+############################## C. NOISeq object ##############################
+
 #Obtain counts 
 
 expression_counts <- expression %>% 
@@ -91,7 +93,7 @@ rownames(expression_counts) <- expression_counts$ensembl_gene_id
 
 factors <- data.frame(
   "specimen_ID" = colnames(expression_counts)[-1],
-  "group" = 1)
+  "group" = 1)    #simulated factors
 dim(factors)
 #[1] 622   2 # this means 621 specimen_IDs and only one factor
 
@@ -107,7 +109,7 @@ mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 #the order of the elements of the factor must coincide with the order of the samples (columns)
 # in the expression data provided. Row number in factor must match with number of cols in data ("FPKM_exprots"). 
 
-noiseqData <- readData(data = expression_counts[-1], 
+noiseqData <- readData(data = expression_counts[-1],#not using 1st col 
                        factors = factors,           #variables indicating the experimental group for each sample
                        gc = mygc,                   #%GC in myannot
                        biotype = mybiotype,         #biotype
@@ -161,6 +163,8 @@ mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
 #[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
+mycd_table <- table(mycd@dat)
+
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
@@ -191,6 +195,10 @@ myGCcontent <- dat(noiseqData,
 #  Min      1Q  Median      3Q     Max 
 #-9.5011 -1.5303 -0.0613  1.3300  6.4901 
 
+#Residual standard error: 2.972 on 81 degrees of freedom
+#Multiple R-squared:  0.8643,	Adjusted R-squared:  0.8459 
+#F-statistic: 46.92 on 11 and 81 DF,  p-value: < 2.2e-16
+
 png("GCbiasOri.png",width=1000)
 explo.plot(myGCcontent,
            samples = NULL,
@@ -203,12 +211,15 @@ dev.off()
 mylengthbias <- dat(noiseqData, 
                     k = 0,
                     type = "lengthbias",
-                    factor = "ceradsc")
-
+                    factor = "group")
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
 #[1] "Length bias detection information is to be computed for:"
-#[1] "1" "2" "3" "4"
+#[1] "1"
+
+#Residual standard error: 10.56 on 82 degrees of freedom
+#Multiple R-squared:  0.2717,	Adjusted R-squared:  0.1829 
+#F-statistic:  3.06 on 10 and 82 DF,  p-value: 0.002402
 
 #Residuals:
 # Min      1Q  Median      3Q     Max 
@@ -226,7 +237,7 @@ dev.off()
 
 myPCA <- dat(noiseqData,
              type = "PCA", 
-             norm = F,
+             norm = T,
              logtransf = F)
 
 #Plot PCA
@@ -234,5 +245,42 @@ myPCA <- dat(noiseqData,
 png("PCA_Ori.png")
 explo.plot(myPCA, samples = c(1,2),
            plottype = "scores",
-           factor = "ceradsc")
+           factor = "group")
 dev.off()
+
+
+#################SOLVE BIASES###################################
+
+library(EDASeq)
+
+#1) filter low count genes.
+#CPM=(counts/fragments sequenced)*one million.
+#Filtering those genes with average CPM below 1, would be different
+#to filtering by those with average counts below 1. 
+
+countMatrixFiltered <- filtered.data(expression_counts[-1], 
+                                     factor = "group",
+                                     norm = T, 
+                                     depth = NULL,
+                                     method = 1, 
+                                     cpm = 0, 
+                                     p.adj = "fdr")
+
+#Filtering out low count features...
+#14952 features are to be kept for differential expression analysis with filtering method 1
+
+#Filter again myannot to have only 
+
+myannot <- myannot %>%
+  filter(ensembl_gene_id %in% rownames(countMatrixFiltered))
+
+##Create EDA object
+
+#all names must match
+
+mydataEDA <- newSeqExpressionSet(
+  counts = as.matrix(countMatrixFiltered),
+  featureData = data.frame(myannot,
+                           row.names = myannot$ensembl_gene_id),
+  phenoData = data.frame(factors,
+                         row.names=factors$specimen_ID))
