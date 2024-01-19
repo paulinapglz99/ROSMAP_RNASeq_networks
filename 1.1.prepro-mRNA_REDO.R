@@ -8,7 +8,8 @@
 
 pacman::p_load('dplyr', 
                'biomaRt',
-               'NOISeq')
+               'NOISeq',
+               'edgeR')
 
 ######################## A. Get the data #####################
 
@@ -26,7 +27,8 @@ colnames(expression)[1] <-"ensembl_gene_id"
 #CPM=(counts/fragments sequenced)*one million.
 #Filtering those genes with average CPM below 1, would be different
 #to filtering by those with average counts below 1. 
-
+rowMeans(cpm(expression_counts,log=T))
+         
 countMatrixFiltered <- filtered.data(as.matrix(expression),
                                      norm = T, 
                                      depth = NULL,
@@ -89,6 +91,19 @@ factors <- data.frame(
 dim(factors)
 #[1] 622   2 # this means 621 specimen_IDs and only one factor
 
+#Names of features characteristics
+
+mylength <- myannot[,c("ensembl_gene_id", "length")]
+rownames(mylength) <- mylength$ensembl_gene_id
+mylength <- mylength[-1]
+mylength<- t(mylength)
+
+names(myannot$ensembl_gene_id) <- myannot$length
+
+mygc <- names(myannot$percentage_gene_gc_content)
+
+mybiotype <-
+
 #for the factor format
 #the order of the elements of the factor must coincide with the order of the samples (columns)
 # in the expression data provided. Row number in factor must match with number of cols in data ("FPKM_exprots"). 
@@ -97,7 +112,7 @@ noiseqData <- readData(data = expression_counts[-1],
                        gc = myannot$percentage_gene_gc_content,  #%GC in myannot
                        biotype = myannot$gene_biotype,          #biotype
                        factors = factors,                 #variables indicating the experimental group for each sample
-                       length =  myannot$length)               #gene length
+                       length =  mylength)               #gene length
 
 #1)check expression bias per subtype
 
@@ -116,6 +131,7 @@ explo.plot(mycountsbio, plottype = "boxplot", samples = 1:10)
 dev.off()
 
 #2)check for low count genes
+
 png("lowcountsOri.png")
 explo.plot(mycountsbio, plottype = "barplot", samples = 1:10)
 dev.off()
@@ -123,7 +139,7 @@ dev.off()
 #Histogram of row means
 
 png("lowCountThres.png")
-hist(rowMeans(cpm(FPKM_exprots,log=T)),
+hist(rowMeans(cpm(expression_counts,log=T)),  #esto no corre por alguna razon
      ylab="genes",
      xlab="mean of log CPM",
      col="gray")
@@ -146,17 +162,15 @@ mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
 #[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
-mycd_table <- table(mycd@dat)
-
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
-#12    609 
+#10    611 
 
 #Plot for Mvalues
 
 png("MvaluesOri.png")
-explo.plot(mycd,samples=sample(1:ncol(FPKM_exprots),10))
+explo.plot(mycd,samples=sample(1:ncol(expression_counts),10))
 dev.off()
 
 #4)check for length & GC bias
@@ -164,10 +178,13 @@ dev.off()
 #A cubic spline regression model is fitted. Both the model p-value and the coefficient
 # of determination (R2) are shown. If the model p-value is significant and R2 value is
 # high (more than 70%), the expression depends on the feature
+addData(expression_counts,
+        length = )
 
 myGCcontent <- dat(noiseqData,
-                   k = 0, type = "GCbias",
-                   factor = "ceradsc")
+                   k = 0, 
+                   type = "GCbias", 
+                   factor = "group")
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
 #[1] "GC content bias detection is to be computed for:"
@@ -189,7 +206,7 @@ dev.off()
 mylengthbias <- dat(noiseqData, 
                     k = 0,
                     type = "lengthbias",
-                    factor = "ceradsc")
+                    factor = "factor")
 
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
@@ -220,5 +237,5 @@ myPCA <- dat(noiseqData,
 png("PCA_Ori.png")
 explo.plot(myPCA, samples = c(1,2),
            plottype = "scores",
-           factor = "ceradsc")
+           factor = "factor")
 dev.off()
