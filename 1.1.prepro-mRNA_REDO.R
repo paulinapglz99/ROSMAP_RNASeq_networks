@@ -109,7 +109,7 @@ mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 #the order of the elements of the factor must coincide with the order of the samples (columns)
 # in the expression data provided. Row number in factor must match with number of cols in data ("FPKM_exprots"). 
 
-noiseqData <- readData(data = expression_counts[-1],#not using 1st col 
+noiseqData <- NOISeq::readData(data = expression_counts[-1],#not using 1st col 
                        factors = factors,           #variables indicating the experimental group for each sample
                        gc = mygc,                   #%GC in myannot
                        biotype = mybiotype,         #biotype
@@ -289,25 +289,98 @@ mydataEDA <- newSeqExpressionSet(
 
 #for gc content
 gcFull <- withinLaneNormalization(mydataEDA, 
-                                  "percentage_gene_gc_content", which = "full")#corrects GC bias 
+                                  "percentage_gene_gc_content",
+                                  which = "full")#corrects GC bias 
 
 #for length
 lFull <- withinLaneNormalization(gcFull, "length", which = "full")#corrects length bias 
 
 #TMM normalization
 
-fullfullTMM <-NOISeq::tmm(normCounts(lFull), long = 1000, lc = 0, k = 0)
+fullfullUqua <-NOISeq::uqua(normCounts(lFull),    #OPCION A USAR TMM EN VEZ DE UQUA
+                          long = 1000, 
+                          lc = 0,
+                          k = 0)
+
 #norm.counts <- betweenLaneNormalization(normCounts(lFull),
 # which = "median", offset = FALSE)
-#FAILED PASSED 
-#
 
-noiseqData = NOISeq::readData(data = fullfullTMM, factors=factors)
+noiseqData <- NOISeq::readData(data = fullfullUqua, 
+                              factors= factors)
 
 #cd has to preceed ARSyN or won't work
-mycd <- NOISeq::dat(noiseqData,type="cd",norm=TRUE)
+
+mycd <- NOISeq::dat(noiseqData,
+                    type="cd",
+                    norm=TRUE)
 
 #[1] "Warning: 95 features with 0 counts in all samples are to be removed for this analysis."
 #[1] "Reference sample is: 525_120515"
+#[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+#10    611 
+
+#############################SOLVE BATCH EFFECT#######################################################
+
+myPCA <- dat(noiseqData, type = "PCA", norm = T, logtransf = F)
+
+#plot preArsyn PCA
+
+png("preArsyn.png")
+explo.plot(myPCA, samples = c(1,2), plottype = "scores",
+           factor = "group")
+dev.off()
+
+#ARSyNseq PCA
+
+
+#################ESTO AUN NO CORRE###################
+
+noiseqData$group <- as.factor(noiseqData$group)
+
+ffTMMARSyn <- ARSyNseq(noiseqData,     #Biobases eSet object
+                       factor = "group",  #when NULL, all factors are considered
+                       batch = F,      #TRUE if factor argument is batch info
+                       norm = "n",     #type of normalization, "n" if already normalized
+                       logtransf = T)  #If F, log-transformation will be applied before ARSyn
+
+#New PCA for ARSyn data
+
+myPCA <- dat(ffTMMARSyn,
+             type = "PCA",
+             norm = T,
+             logtransf = T)
+
+#Plot post-ARSyn
+
+png("postArsyn.png")
+explo.plot(myPCA, samples = c(1,2),
+           plottype = "scores", 
+           factor = "groups")
+dev.off()
+
+
+#############################FINAL QUALITY CHECK#######################################################
+noiseqData <- readData(data = exprs(ffTMMARSyn), gc = myannot[,1:2],
+                      biotype = myannot[,c(1,3)],factor=designExp,
+                      length=myannot[,c(1,8)])
+mycountsbio = dat(noiseqData, type = "countsbio", factor = "subtype",
+                  norm=T)
+png("CountsFinal.png")
+explo.plot(mycountsbio, plottype = "boxplot",samples=1:5)
+dev.off()
+myGCcontent <- dat(noiseqData, k = 0, type = "GCbias", 
+                   factor = "subtype",norm=T)
+png("GCbiasFinal.png",width=1000)
+par(mfrow=c(1,5))
+sapply(1:5,function(x) explo.plot(myGCcontent, samples = x))
+dev.off()
+mylenBias <- dat(noiseqData, k = 0, type = "lengthbias", 
+                 factor = "subtype",norm=T)
+png("lengthbiasFinal.png",width=1000)
+par(mfrow=c(1,5))
+sapply(1:5,function(x) explo.plot(mylenBias, samples = x))
+dev.off()
