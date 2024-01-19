@@ -83,6 +83,10 @@ expression_counts <- expression %>%
 dim(expression_counts)
 #[1] 18848   623
 
+#Give format to table for NOIseq purposes
+
+rownames(expression_counts) <- expression_counts$ensembl_gene_id
+
 #Obtain factors      
 
 factors <- data.frame(
@@ -93,26 +97,21 @@ dim(factors)
 
 #Names of features characteristics
 
-mylength <- myannot[,c("ensembl_gene_id", "length")]
-rownames(mylength) <- mylength$ensembl_gene_id
-mylength <- mylength[-1]
-mylength<- t(mylength)
+mylength <- setNames(myannot$length, myannot$ensembl_gene_id)
 
-names(myannot$ensembl_gene_id) <- myannot$length
+mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
 
-mygc <- names(myannot$percentage_gene_gc_content)
-
-mybiotype <-
+mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
 #for the factor format
 #the order of the elements of the factor must coincide with the order of the samples (columns)
 # in the expression data provided. Row number in factor must match with number of cols in data ("FPKM_exprots"). 
 
 noiseqData <- readData(data = expression_counts[-1], 
-                       gc = myannot$percentage_gene_gc_content,  #%GC in myannot
-                       biotype = myannot$gene_biotype,          #biotype
-                       factors = factors,                 #variables indicating the experimental group for each sample
-                       length =  mylength)               #gene length
+                       factors = factors,           #variables indicating the experimental group for each sample
+                       gc = mygc,                   #%GC in myannot
+                       biotype = mybiotype,         #biotype
+                       length =  mylength)          #gene length
 
 #1)check expression bias per subtype
 
@@ -178,8 +177,6 @@ dev.off()
 #A cubic spline regression model is fitted. Both the model p-value and the coefficient
 # of determination (R2) are shown. If the model p-value is significant and R2 value is
 # high (more than 70%), the expression depends on the feature
-addData(expression_counts,
-        length = )
 
 myGCcontent <- dat(noiseqData,
                    k = 0, 
@@ -206,7 +203,7 @@ dev.off()
 mylengthbias <- dat(noiseqData, 
                     k = 0,
                     type = "lengthbias",
-                    factor = "factor")
+                    factor = "ceradsc")
 
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
@@ -237,5 +234,5 @@ myPCA <- dat(noiseqData,
 png("PCA_Ori.png")
 explo.plot(myPCA, samples = c(1,2),
            plottype = "scores",
-           factor = "factor")
+           factor = "ceradsc")
 dev.off()
