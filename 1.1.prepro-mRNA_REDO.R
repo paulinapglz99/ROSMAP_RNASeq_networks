@@ -22,20 +22,6 @@ dim(expression)
 
 colnames(expression)[1] <-"ensembl_gene_id"
 
-######################## B. Filter data ######################
-
-#CPM=(counts/fragments sequenced)*one million.
-#Filtering those genes with average CPM below 1, would be different
-#to filtering by those with average counts below 1. 
-rowMeans(cpm(expression_counts,log=T))
-         
-countMatrixFiltered <- filtered.data(as.matrix(expression),
-                                     norm = T, 
-                                     depth = NULL,
-                                     method = 1,   #method 1 (CPM)
-                                     cpm = 1, 
-                                     p.adj = "fdr")
-
 ############################## B. Annotation ##############################
 
 #Generate annotation with ensembl. Annotate gene_biotype, GC content
@@ -94,6 +80,7 @@ rownames(expression_counts) <- expression_counts$ensembl_gene_id
 factors <- data.frame(
   "specimen_ID" = colnames(expression_counts)[-1],
   "group" = 1)    #simulated factors
+factors$group <- sample(c(1, 2), size = nrow(factors), replace = TRUE)  #Simulation to give random numbers 1 and 2 to the df de factors
 dim(factors)
 #[1] 622   2 # this means 621 specimen_IDs and only one factor
 
@@ -105,7 +92,6 @@ mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
 
 mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
-#for the factor format
 #the order of the elements of the factor must coincide with the order of the samples (columns)
 # in the expression data provided. Row number in factor must match with number of cols in data ("FPKM_exprots"). 
 
@@ -163,12 +149,17 @@ mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
 #[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
-mycd_table <- table(mycd@dat)
-
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 
+#When only 1-type-factor 
 #FAILED PASSED 
 #10    611 
+
+#When there's two categorical variants in factor
+
+#FAILED PASSED 
+#14    607 
+
 
 #Plot for Mvalues
 
@@ -295,22 +286,21 @@ gcFull <- withinLaneNormalization(mydataEDA,
 #for length
 lFull <- withinLaneNormalization(gcFull, "length", which = "full")#corrects length bias 
 
-#TMM normalization
+##################### TRY normalization ##################### 
 
-fullfullUqua <-NOISeq::uqua(normCounts(lFull),    #OPCION A USAR TMM EN VEZ DE UQUA
+#For Uqua
+
+UquaNorm <-NOISeq::uqua(normCounts(lFull),    #OPCION A USAR TMM EN VEZ DE UQUA
                           long = 1000, 
                           lc = 0,
                           k = 0)
 
-#norm.counts <- betweenLaneNormalization(normCounts(lFull),
-# which = "median", offset = FALSE)
-
-noiseqData <- NOISeq::readData(data = fullfullUqua, 
-                              factors= factors)
+noiseqData_Uqua <- NOISeq::readData(data = UquaNorm, 
+                              factors = factors)
 
 #cd has to preceed ARSyN or won't work
 
-mycd <- NOISeq::dat(noiseqData,
+mycd_Uqua <- NOISeq::dat(noiseqData_Uqua,
                     type="cd",
                     norm=TRUE)
 
@@ -318,38 +308,103 @@ mycd <- NOISeq::dat(noiseqData,
 #[1] "Reference sample is: 525_120515"
 #[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
-table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
+table(mycd_Uqua@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
 #10    611 
 
+#With FPKM normalization
+
+RPKMNorm <- NOISeq::rpkm(normCounts(lFull),
+                      long = 1000, 
+                      lc = 0,
+                      k = 0)
+
+
+noiseqData_RPKM <- NOISeq::readData(data = RPKMNorm, 
+                                    factors= factors)
+
+#cd has to preceed ARSyN or won't work
+
+mycd_RPKM <- NOISeq::dat(noiseqData_RPKM,
+                         type="cd",
+                         norm=TRUE)
+
+#[1] "Warning: 95 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 525_120515"
+#[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
+
+table(mycd_RPKM@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+# 582     39 
+
+#With TMM normalization
+
+TMMNorm <-NOISeq::tmm(normCounts(lFull),    #OPCION A USAR TMM EN VEZ DE UQUA
+                        long = 1000, 
+                        lc = 0,
+                        k = 0)
+
+noiseqData_TMM <- NOISeq::readData(data = TMMNorm, 
+                                    factors = factors)
+
+#cd has to preceed ARSyN or won't work
+
+mycd_TMM <- NOISeq::dat(noiseqData_TMM,
+                         type="cd",
+                         norm=TRUE)
+
+#[1] "Warning: 95 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 525_120515"
+#[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
+
+table(mycd_TMM@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+#564     57 
+
+#At this moment, any of the normalization makes data pass the Diagnostic Test
+
 #############################SOLVE BATCH EFFECT#######################################################
 
-myPCA <- dat(noiseqData, type = "PCA", norm = T, logtransf = F)
+myPCAp_preARSyn <- dat(noiseqData_Uqua, 
+                      type = "PCA", 
+                      norm = T, 
+                      logtransf = F)
 
 #plot preArsyn PCA
 
 png("preArsyn.png")
-explo.plot(myPCA, samples = c(1,2), plottype = "scores",
+explo.plot(myPCAp_preARSyn, samples = c(1,2),
+           plottype = "scores",
            factor = "group")
 dev.off()
 
-#ARSyNseq PCA
-
+#ARSyNseq for batch effect solution
 
 #################ESTO AUN NO CORRE###################
 
-noiseqData$group <- as.factor(noiseqData$group)
+#When batch is identified with one of the factors described in the argument factor
+#of the data object, ARSyNseq estimates this effect and removes it by estimating the
+#main PCs of the ANOVA effects associated. 
+#Selected PCs will be those that explain more than the variability proportion 
+#specified in Variability. 
 
-ffTMMARSyn <- ARSyNseq(noiseqData,     #Biobases eSet object
-                       factor = "group",  #when NULL, all factors are considered
+norm_ARSyn <- ARSyNseq(noiseqData_Uqua,     #Biobases eSet object
+                       factor = NULL,  #when NULL, all factors are considered
                        batch = F,      #TRUE if factor argument is batch info
-                       norm = "n",     #type of normalization, "n" if already normalized
-                       logtransf = T)  #If F, log-transformation will be applied before ARSyn
+                       norm = "uqua",     #type of normalization, "n" if already normalized
+                       logtransf = F)  #If F, log-transformation will be applied before ARSyn
+
+#ERROR, when factor = NULL
+#Error in apply(sub, 2, mean) : dim(X) must have a positive length
+
+#I also tried changing the normalization type, and giving a different noiseqData (the normalized one)
 
 #New PCA for ARSyn data
 
-myPCA <- dat(ffTMMARSyn,
+myPCA_ARSyn <- dat(norm_ARSyn,
              type = "PCA",
              norm = T,
              logtransf = T)
@@ -357,30 +412,75 @@ myPCA <- dat(ffTMMARSyn,
 #Plot post-ARSyn
 
 png("postArsyn.png")
-explo.plot(myPCA, samples = c(1,2),
+explo.plot(myPCA_ARSyn, samples = c(1,2),
            plottype = "scores", 
            factor = "groups")
 dev.off()
 
 
 #############################FINAL QUALITY CHECK#######################################################
-noiseqData <- readData(data = exprs(ffTMMARSyn), gc = myannot[,1:2],
-                      biotype = myannot[,c(1,3)],factor=designExp,
+
+noiseqData_final <- readData(data = exprs(norm_ARSyn),
+                      gc = myannot[,1:2],
+                      biotype = myannot[,c(1,3)],
+                      factor=designExp,
                       length=myannot[,c(1,8)])
-mycountsbio = dat(noiseqData, type = "countsbio", factor = "subtype",
+
+mycountsbio_final <- dat(noiseqData, 
+                   type = "countsbio", 
+                   factor = "group",
                   norm=T)
+
 png("CountsFinal.png")
-explo.plot(mycountsbio, plottype = "boxplot",samples=1:5)
+explo.plot(mycountsbio_final, plottype = "boxplot",samples=1:5)
 dev.off()
-myGCcontent <- dat(noiseqData, k = 0, type = "GCbias", 
+
+myGCcontent_final <- dat(noiseqData, k = 0, type = "GCbias", 
                    factor = "subtype",norm=T)
+
 png("GCbiasFinal.png",width=1000)
 par(mfrow=c(1,5))
 sapply(1:5,function(x) explo.plot(myGCcontent, samples = x))
 dev.off()
+
 mylenBias <- dat(noiseqData, k = 0, type = "lengthbias", 
                  factor = "subtype",norm=T)
 png("lengthbiasFinal.png",width=1000)
 par(mfrow=c(1,5))
 sapply(1:5,function(x) explo.plot(mylenBias, samples = x))
 dev.off()
+
+############ ESTO NO LO EMPIEZO AUN ############ 
+#############################RESOLVE DUPLICATES & SAVE##################################################
+#get duplicates
+i <- factors$specimen_ID %>% 
+  filter(duplicated(.))
+
+#get sample barcode per sample
+
+i <- lapply(i,function(x) factors$specimen_ID [factors$specimen_ID == x])
+
+#separate duplicates
+final <- exprs(norm_ARSyn)
+duplis <- final[,colnames(final)%in%unlist(i)]
+prefi <- final[,!colnames(final)%in%unlist(i)]
+
+#average duplicates
+temp <- do.call(cbind,lapply(i,function(x) 
+  rowMeans(duplis[,colnames(duplis)%in%x])))
+
+#identify samples with barcode 
+colnames(temp) <- factors$specimen_ID[duplicated(factors$specimen_ID)]
+colnames(prefi) <-substr(colnames(prefi),1,19)
+
+#joint matrices
+final <- cbind(prefi,temp)
+dim(final)
+#[1] 17077   805
+
+final <- final %>%
+  select(order(match(colnames(.), subtype$samples)))
+
+#Finally, save table
+write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
+#duplicates share everything except the plate
