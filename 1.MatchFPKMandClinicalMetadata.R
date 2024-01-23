@@ -63,4 +63,8 @@ dim(AD_MI_cogdx)
 counts_cogdx <- fpkm_matrix %>%
   dplyr::select(all_of(AD_MI_cogdx$specimenID))
 
+#Save count table
+
+vroom::vroom_write(counts_cogdx, file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_230124.csv')
+
 #next script 1.1.prepro-mRNA.R
