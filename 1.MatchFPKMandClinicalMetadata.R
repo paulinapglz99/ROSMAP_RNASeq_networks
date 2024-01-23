@@ -58,12 +58,9 @@ dim(AD_MI_cogdx)
 # [1] 624   5
 
 #Now we have only specimenIDs from cognitive diagnosis we are interested in
-
-cogdx_specimenID <- AD_MI_cogdx$specimenID
-
 # Finally we subset RNAseq count tables to have only specimenIDs with cogdx wanted  ----------
 
 counts_cogdx <- fpkm_matrix %>%
-  dplyr::select(all_of(cogdx_specimenID))
+  dplyr::select(all_of(AD_MI_cogdx$specimenID))
 
 #next script 1.1.prepro-mRNA.R
