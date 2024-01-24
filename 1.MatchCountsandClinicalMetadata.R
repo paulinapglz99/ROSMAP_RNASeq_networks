@@ -61,7 +61,10 @@ dim(AD_MI_cogdx)
 # Finally we subset RNAseq count tables to have only specimenIDs with cogdx wanted  ----------
 
 counts_cogdx <- fpkm_matrix %>%
-  dplyr::select(all_of(AD_MI_cogdx$specimenID))
+  dplyr::select(all_of(AD_MI_cogdx$specimenID)) %>% 
+  mutate(gene_id = fpkm_matrix$gene_id, .before = 1)
+dim(counts_cogdx)
+#[1] 55889   625
 
 #Save count table
 
