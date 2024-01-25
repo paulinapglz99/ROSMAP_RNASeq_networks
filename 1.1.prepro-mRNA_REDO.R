@@ -409,15 +409,23 @@ norm_ARSyn <- ARSyNseq(noiseqData_Uqua,     #Biobases eSet object
                        norm = "n",     #type of normalization, "n" if already normalized
                        logtransf = F)  #If F, log-transformation will be applied before ARSyn
 
+
+ARSyn_no_norm <- ARSyNseq(noiseqData,     #Biobases eSet object
+                       factor = "group",  #when NULL, all factors are considered
+                       batch = FALSE,      #TRUE if factor argument is batch info
+                       norm = "n",     #type of normalization, "n" if already normalized
+                       logtransf = F)  #If F, log-transformation will be applied before ARSyn
+
+
 #ERROR, when factor = NULL
+#It gives an error when factor = NULL and norm is "n", you must give a factor
 #Error in apply(sub, 2, mean) : dim(X) must have a positive length
-#nor uqua, TMM or RPKM normalizations run
 
 #I also tried changing the normalization type, and giving a different noiseqData (the normalized one)
 
 #New PCA for ARSyn data
 
-myPCA_ARSyn <- dat(norm_ARSyn,
+myPCA_ARSyn <- dat(ARSyn_no_norm,
              type = "PCA",
              norm = T,
              logtransf = T)
@@ -427,18 +435,18 @@ myPCA_ARSyn <- dat(norm_ARSyn,
 png("postArsyn.png")
 explo.plot(myPCA_ARSyn, samples = c(1,2),
            plottype = "scores", 
-           factor = "groups")
+           factor = "group")
 dev.off()
 
 #############################FINAL QUALITY CHECK#######################################################
 
 #Create new noiseq object with re-normalized counts
-noiseqData_final <- readData(data = exprs(norm_ARSyn),
+
+noiseqData_final <- readData(data = exprs(ARSyn_no_norm),
                       gc = myannot[,1:2],
                       biotype = myannot[,c(1,3)],
-                      factor=designExp,
-                      length=myannot[,c(1,8)])
-
+                      factor = factors,
+                      length = myannot[,c(1,8)])
 
 mycountsbio_final <- dat(noiseqData, 
                    type = "countsbio", 
@@ -448,7 +456,7 @@ mycountsbio_final <- dat(noiseqData,
 png("CountsFinal.png")
 explo.plot(mycountsbio_final,
            plottype = "boxplot",
-           samples=1:5)
+           samples=1:5)   #this doesnot run still
 dev.off()
 
 #calculate final GC bias
@@ -463,7 +471,7 @@ myGCcontent_final <- dat(noiseqData,
 
 png("GCbiasFinal.png",width=1000)
 par(mfrow=c(1,5))
-sapply(1:5,function(x) explo.plot(myGCcontent_final, samples = x))
+explo.plot(myGCcontent_final, plottype = "boxplot", samples = 1:5)
 dev.off()
 
 #calculate final length bias
@@ -478,37 +486,6 @@ png("lengthbiasFinal.png",width=1000)
 par(mfrow=c(1,5))
 sapply(1:5,function(x) explo.plot(mylenBias, samples = x))
 dev.off()
-
-############ ESTO NO LO EMPIEZO AUN ############ 
-#############################RESOLVE DUPLICATES & SAVE##################################################
-#get duplicates
-i <- factors$specimen_ID %>% 
-  filter(duplicated(.))
-
-#get sample barcode per sample
-
-i <- lapply(i,function(x) factors$specimen_ID [factors$specimen_ID == x])
-
-#separate duplicates
-final <- exprs(norm_ARSyn)
-duplis <- final[,colnames(final)%in%unlist(i)]
-prefi <- final[,!colnames(final)%in%unlist(i)]
-
-#average duplicates
-temp <- do.call(cbind,lapply(i,function(x) 
-  rowMeans(duplis[,colnames(duplis)%in%x])))
-
-#identify samples with barcode 
-colnames(temp) <- factors$specimen_ID[duplicated(factors$specimen_ID)]
-colnames(prefi) <-substr(colnames(prefi),1,19)
-
-#joint matrices
-final <- cbind(prefi,temp)
-dim(final)
-#[1] 17077   805
-
-final <- final %>%
-  select(order(match(colnames(.), subtype$samples)))
 
 #Finally, save table
 write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
