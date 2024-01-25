@@ -1,4 +1,5 @@
-#Script for preprocessing (annot) and QC of gene expression data with NOISeq package
+#Script for preprocessing, annot and QC of gene expression data
+#Here we use the NOISeq, edgeR and EDAseq packages
 #paulinapglz.99@gmail.com
 #Here we perform:
 ## Data preparation for NOISeq bias identification
@@ -16,26 +17,28 @@ pacman::p_load('dplyr',
 #Read counts data
 #This file was generated in 1.MatchFPKMandClinicalMetadata.R
 
-expression <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_new161223.csv') #counts for cogdx = 1, 2, 3, 4 and 5
+expression <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_new161223.csv') %>%   #counts for cogdx = 1, 2, 3, 4 and 5
+                           as.data.frame()
 dim(expression)
 #[1] 55889   623  #original expression counts have 55889 genes and 623 specimenIDs
 
-colnames(expression)[1] <-"ensembl_gene_id"
+colnames(expression)[1] <-"ensembl_gene_id" #change the name for further filtering
 
 ############################## B. Annotation ##############################
 
-#Generate annotation with ensembl. Annotate gene_biotype, GC content
+#Generate annotation with ensembl.
+#First we generate mart object
 
-mart <- useEnsembl("ensembl",
+mart <- useEnsembl("ensembl",                         
                    dataset="hsapiens_gene_ensembl")
 
-#annnotate GC content, length & biotype per transcript
+#We create myannot, with GC content, biotype, info for length & names per transcript
 
 myannot <- getBM(attributes = c("ensembl_gene_id", 
                                 "percentage_gene_gc_content", "gene_biotype",
                                 "start_position","end_position","hgnc_symbol"),
                  filters = "ensembl_gene_id", 
-                 values =  expression$ensembl_gene_id,
+                 values =  expression$ensembl_gene_id,  #annotate the genes in the count matrix 
                  mart = mart)
 
 #Add length column
@@ -160,7 +163,6 @@ table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 #FAILED PASSED 
 #14    607 
 
-
 #Plot for Mvalues
 
 png("MvaluesOri.png")
@@ -180,7 +182,7 @@ myGCcontent <- dat(noiseqData,
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
 #[1] "GC content bias detection is to be computed for:"
-#[1] "1" "2" "3" "4"
+#[1] "1" "2"
 
 #Residuals:
 #  Min      1Q  Median      3Q     Max 
@@ -391,14 +393,15 @@ dev.off()
 #Selected PCs will be those that explain more than the variability proportion 
 #specified in Variability. 
 
-norm_ARSyn <- ARSyNseq(noiseqData_Uqua,     #Biobases eSet object
+norm_ARSyn <- ARSyNseq(noiseqData,     #Biobases eSet object
                        factor = NULL,  #when NULL, all factors are considered
-                       batch = F,      #TRUE if factor argument is batch info
-                       norm = "uqua",     #type of normalization, "n" if already normalized
+                       batch = FALSE,      #TRUE if factor argument is batch info
+                       norm = "n",     #type of normalization, "n" if already normalized
                        logtransf = F)  #If F, log-transformation will be applied before ARSyn
 
 #ERROR, when factor = NULL
 #Error in apply(sub, 2, mean) : dim(X) must have a positive length
+#nor uqua, TMM or RPKM normalizations run
 
 #I also tried changing the normalization type, and giving a different noiseqData (the normalized one)
 
@@ -417,14 +420,15 @@ explo.plot(myPCA_ARSyn, samples = c(1,2),
            factor = "groups")
 dev.off()
 
-
 #############################FINAL QUALITY CHECK#######################################################
 
+#Create new noiseq object with re-normalized counts
 noiseqData_final <- readData(data = exprs(norm_ARSyn),
                       gc = myannot[,1:2],
                       biotype = myannot[,c(1,3)],
                       factor=designExp,
                       length=myannot[,c(1,8)])
+
 
 mycountsbio_final <- dat(noiseqData, 
                    type = "countsbio", 
@@ -432,19 +436,34 @@ mycountsbio_final <- dat(noiseqData,
                   norm=T)
 
 png("CountsFinal.png")
-explo.plot(mycountsbio_final, plottype = "boxplot",samples=1:5)
+explo.plot(mycountsbio_final,
+           plottype = "boxplot",
+           samples=1:5)
 dev.off()
 
-myGCcontent_final <- dat(noiseqData, k = 0, type = "GCbias", 
-                   factor = "subtype",norm=T)
+#calculate final GC bias
+
+myGCcontent_final <- dat(noiseqData,
+                         k = 0, 
+                         type = "GCbias", 
+                         factor = "group",
+                         norm=T)
+
+#Plot final GC bias
 
 png("GCbiasFinal.png",width=1000)
 par(mfrow=c(1,5))
-sapply(1:5,function(x) explo.plot(myGCcontent, samples = x))
+sapply(1:5,function(x) explo.plot(myGCcontent_final, samples = x))
 dev.off()
 
+#calculate final length bias
+
 mylenBias <- dat(noiseqData, k = 0, type = "lengthbias", 
-                 factor = "subtype",norm=T)
+                 factor = "group",
+                 norm=T)
+
+#Plot final length bias
+
 png("lengthbiasFinal.png",width=1000)
 par(mfrow=c(1,5))
 sapply(1:5,function(x) explo.plot(mylenBias, samples = x))
@@ -481,6 +500,9 @@ dim(final)
 final <- final %>%
   select(order(match(colnames(.), subtype$samples)))
 
+#Finally, save table
+write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
+#duplicates share everything except the plate
 #Finally, save table
 write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
 #duplicates share everything except the plate
