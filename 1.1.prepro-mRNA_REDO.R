@@ -110,7 +110,7 @@ noiseqData <- NOISeq::readData(data = expression_counts[-1],#not using 1st col
 #from the noiseqData object
 
 mycountsbio <- dat(noiseqData, 
-                   type =  "countsbio",
+                   type =  "countsbio",  
                    norm = T, 
                    factor = NULL)
 #Plots
@@ -163,6 +163,10 @@ table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 #FAILED PASSED 
 #14    607 
 
+#When using real data
+
+
+
 #Plot for Mvalues
 
 png("MvaluesOri.png")
@@ -176,7 +180,7 @@ dev.off()
 # high (more than 70%), the expression depends on the feature
 
 myGCcontent <- dat(noiseqData,
-                   k = 0, 
+                   k = 0,            #A feature is considered to be detected if the corresponding number of read counts is > k. 
                    type = "GCbias", 
                    factor = "group")
 
@@ -258,6 +262,7 @@ countMatrixFiltered <- filtered.data(expression_counts[-1],
                                      method = 1, 
                                      cpm = 0, 
                                      p.adj = "fdr")
+#why? que me esta quitando?
 
 #Filtering out low count features...
 #14952 features are to be kept for differential expression analysis with filtering method 1
@@ -286,7 +291,12 @@ gcFull <- withinLaneNormalization(mydataEDA,
                                   which = "full")#corrects GC bias 
 
 #for length
-lFull <- withinLaneNormalization(gcFull, "length", which = "full")#corrects length bias 
+lFull <- withinLaneNormalization(gcFull, 
+                                 "length", 
+                                 which = "full")#corrects length bias 
+
+#lFull ya es un objeto S3? con los datos corregidos por length y GC, podria volver a hacer el 
+#diagnostico con NOISeq
 
 ##################### TRY normalization ##################### 
 
@@ -313,7 +323,7 @@ mycd_Uqua <- NOISeq::dat(noiseqData_Uqua,
 table(mycd_Uqua@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
-#10    611 
+#10    611 son los mismos?
 
 #With FPKM normalization
 
@@ -393,8 +403,8 @@ dev.off()
 #Selected PCs will be those that explain more than the variability proportion 
 #specified in Variability. 
 
-norm_ARSyn <- ARSyNseq(noiseqData,     #Biobases eSet object
-                       factor = NULL,  #when NULL, all factors are considered
+norm_ARSyn <- ARSyNseq(noiseqData_Uqua,     #Biobases eSet object
+                       factor = "group",  #when NULL, all factors are considered
                        batch = FALSE,      #TRUE if factor argument is batch info
                        norm = "n",     #type of normalization, "n" if already normalized
                        logtransf = F)  #If F, log-transformation will be applied before ARSyn
