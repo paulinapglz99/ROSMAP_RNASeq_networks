@@ -168,18 +168,10 @@ mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 
-#When only 1-type-factor 
-#FAILED PASSED 
-#10    611 
-
-#When there's two categorical variants in factor
-
-#FAILED PASSED 
-#14    607 
-
 #When using real data
 
-
+#FAILED PASSED 
+# 6    617
 
 #Plot for Mvalues
 
@@ -196,19 +188,9 @@ dev.off()
 myGCcontent <- dat(noiseqData,
                    k = 0,            #A feature is considered to be detected if the corresponding number of read counts is > k. 
                    type = "GCbias", 
-                   factor = "group")
+                   factor = "cogdx")
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
-#[1] "GC content bias detection is to be computed for:"
-#[1] "1" "2"
-
-#Residuals:
-#  Min      1Q  Median      3Q     Max 
-#-9.5011 -1.5303 -0.0613  1.3300  6.4901 
-
-#Residual standard error: 2.972 on 81 degrees of freedom
-#Multiple R-squared:  0.8643,	Adjusted R-squared:  0.8459 
-#F-statistic: 46.92 on 11 and 81 DF,  p-value: < 2.2e-16
 
 png("GCbiasOri.png",width=1000)
 explo.plot(myGCcontent,
@@ -222,19 +204,9 @@ dev.off()
 mylengthbias <- dat(noiseqData, 
                     k = 0,
                     type = "lengthbias",
-                    factor = "group")
+                    factor = "cogdx")
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
-#[1] "Length bias detection information is to be computed for:"
-#[1] "1"
-
-#Residual standard error: 10.56 on 82 degrees of freedom
-#Multiple R-squared:  0.2717,	Adjusted R-squared:  0.1829 
-#F-statistic:  3.06 on 10 and 82 DF,  p-value: 0.002402
-
-#Residuals:
-# Min      1Q  Median      3Q     Max 
-#-29.152  -2.099  -0.478   1.663  83.628 
 
 #Plot length bias
 
@@ -256,7 +228,7 @@ myPCA <- dat(noiseqData,
 png("PCA_Ori.png")
 explo.plot(myPCA, samples = c(1,2),
            plottype = "scores",
-           factor = "group")
+           factor = "cogdx")
 dev.off()
 
 
@@ -267,33 +239,32 @@ dev.off()
 #Filtering those genes with average CPM below 1, would be different
 #to filtering by those with average counts below 1. 
 
+#why? que me esta quitando? como calcula los CPM si ya estan normalizados 
+
 countMatrixFiltered <- filtered.data(expression_counts[-1], 
-                                     factor = "group",
+                                     factor = "cogdx",
                                      norm = T, 
                                      depth = NULL,
                                      method = 1, 
                                      cpm = 0, 
                                      p.adj = "fdr")
-#why? que me esta quitando?
 
 #Filtering out low count features...
-#14952 features are to be kept for differential expression analysis with filtering method 1
+#14951 features are to be kept for differential expression analysis with filtering method 1
 
-#Filter again myannot to have only 
+#Filter again myannot to have only genes after filtering
 
 myannot <- myannot %>%
   filter(ensembl_gene_id %in% rownames(countMatrixFiltered))
 
 ##Create EDA object
 
-#all names must match
-
 mydataEDA <- newSeqExpressionSet(
   counts = as.matrix(countMatrixFiltered),
   featureData = data.frame(myannot,
                            row.names = myannot$ensembl_gene_id),
   phenoData = data.frame(factors,
-                         row.names=factors$specimen_ID))
+                         row.names=factors$specimenID))
 
 #order for less bias
 
