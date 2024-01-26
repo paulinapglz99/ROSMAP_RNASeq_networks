@@ -21,28 +21,27 @@ colnames(counts)[1] <- "gene_id"  #as we remove the last two characters we have 
 RNA_seq_metadata <- metadata %>% 
   filter(assay == 'rnaSeq', 
          organ == 'brain') %>% 
-  dplyr::select(individualID, specimenID, msex, cogdx, ceradsc) #I also added columns for the factors later
+  dplyr::select(assay, individualID, specimenID,
+                msex, cogdx, ceradsc, braaksc) #I also added columns for the factors later
 
 # filter specific columns based on the values of "specimenID"
 #in RNA_seq_metadata and then add a new column "gene_id" in the first position of 
 #the result.
 
-fpkm_matrix <- counts[,(colnames(counts) %in% RNA_seq_metadata$specimenID)] %>%  #only specimenIDs in the metadata
+counts_matrix <- counts[,(colnames(counts) %in% metadata$specimenID)] %>%  #only specimenIDs in the metadata
   mutate(gene_id = counts$gene_id, .before = 1)
-fpkm_matrix$gene_id <- str_sub(fpkm_matrix$gene_id,1, 15)
+counts_matrix$gene_id <- str_sub(counts_matrix$gene_id,1, 15)
+dim(counts_matrix)
+#[1] 55889   637
 
 #Simplify metadata to maintain only specimenIDs in the count matrix
 
 RNA_seq_metadata <-  RNA_seq_metadata %>%
-  filter(specimenID %in% colnames(counts))
+  filter(specimenID %in% colnames(counts_matrix))
 dim(RNA_seq_metadata)
 #[1] 636   5
 
-#Subset by cognitive diagnosis ------------------
-
-#First, we assign libraries for the respective cognitive diagnosis
-#as the metadata dictionary says:
-
+#As the metadata dictionary says:
 ##1 NCI: No cognitive impairment (No impaired domains)
 ##2 MCI: Mild cognitive impairment (One impaired domain) and NO other cause of CI
 ##3 MCI: Mild cognitive impairment (One impaired domain) AND another cause of CI
@@ -52,22 +51,26 @@ dim(RNA_seq_metadata)
 
 #we don't need cogdx == 6, so we filter the metadata
 
-AD_MI_cogdx <- RNA_seq_metadata %>% 
+RNA_seq_metadata <- RNA_seq_metadata %>% 
   filter(cogdx != 6)         
-dim(AD_MI_cogdx)
-# [1] 624   5
+dim(RNA_seq_metadata)
+# [1] 624   7
 
 #Now we have only specimenIDs from cognitive diagnosis we are interested in
-# Finally we subset RNAseq count tables to have only specimenIDs with cogdx wanted  ----------
+#Finally we subset RNAseq count tables to have only specimenIDs with cogdx wanted  ----------
 
-counts_cogdx <- fpkm_matrix %>%
-  dplyr::select(all_of(AD_MI_cogdx$specimenID)) %>% 
-  mutate(gene_id = fpkm_matrix$gene_id, .before = 1)
-dim(counts_cogdx)
+counts_matrix <- counts_matrix %>%
+  dplyr::select(all_of(RNA_seq_metadata$specimenID)) %>% 
+  mutate(gene_id = counts_matrix$gene_id, .before = 1)
+dim(counts_matrix)
 #[1] 55889   625
+
+#Save filtered metadata
+
+vroom::vroom_write(RNA_seq_metadata, file = '/datos/rosmap/metadata/RNA_seq_metadata_250124.csv')
 
 #Save count table
 
-vroom::vroom_write(counts_cogdx, file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_230124.csv')
+vroom::vroom_write(counts_matrix, file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv')
 
 #next script 1.1.prepro-mRNA.R
