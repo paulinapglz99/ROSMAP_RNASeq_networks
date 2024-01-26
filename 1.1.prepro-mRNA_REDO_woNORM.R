@@ -85,7 +85,7 @@ rownames(expression_counts) <- expression_counts$ensembl_gene_id
 
 metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_250124.csv") %>% 
   dplyr::select(specimenID, cogdx, ceradsc, braaksc)
-dim(factors)
+dim(metadata)
 #[1] 624   4
 
 factors <- data.frame(
@@ -95,6 +95,32 @@ factors <- factors %>%
   left_join(metadata, by = "specimenID")
 dim(factors)
 #[1] 624   4  # this means 624 specimen_IDs and only one factor
+
+#Let's explore the metadata
+library(ggplot2)
+
+ggplot(factors, aes(x = factor(cogdx))) +
+  geom_bar(fill = "#6495ed", color = "black") +
+  labs(title = "Histograma de cogdx",
+       x = "Cogdx",
+       y = "Frecuencia") +
+  theme_bw()
+  
+ggplot(factors, aes(x = factor(ceradsc))) +
+  geom_bar(fill = "#6495ed", color = "black") +
+  labs(title = "Histograma de ceradsc",
+       x = "ceradsc",
+       y = "Frecuencia") +
+  theme_bw()
+
+
+ggplot(factors, aes(x = factor(braaksc))) +
+  geom_bar(fill = "#6495ed", color = "black") +
+  labs(title = "Histograma de braaksc",
+       x = "braaksc",
+       y = "Frecuencia") +
+  theme_bw()
+
 
 #For NOISeq, order of factors$specimenIDs and  colnames(expression_counts)[-1] must match
 
@@ -424,4 +450,5 @@ write.table(final,"filtered_FPKM_matrix_250124.tsv",sep='\t',quote=F)
 #duplicates share everything except the plate
 #Finally, save table
 write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
-#duplicates share everything except the plate
+
+#END
