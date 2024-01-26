@@ -83,15 +83,16 @@ rownames(expression_counts) <- expression_counts$ensembl_gene_id
 
 #Obtain factors from metadata
 
-factors <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_250124.csv") %>% 
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_250124.csv") %>% 
   dplyr::select(specimenID, cogdx, ceradsc, braaksc)
 dim(factors)
 #[1] 624   4
 
-#Redim factors to match with count data
+factors <- data.frame(
+  "specimenID" = colnames(expression_counts)[-1])   
 
 factors <- factors %>% 
-  filter(specimenID %in% colnames(expression_counts))
+  left_join(metadata, by = "specimenID")
 dim(factors)
 #[1] 624   4  # this means 624 specimen_IDs and only one factor
 
@@ -139,10 +140,12 @@ dev.off()
 
 #Histogram of row means
 
+#esto no corre por alguna razon
+
 png("lowCountThres.png")
-hist(rowMeans(cpm(expression_counts,log=T)),  #esto no corre por alguna razon
+hist(rowMeans(cpm(expression_counts,log=T)),
      ylab="genes",
-     xlab="mean of log CPM",
+     xlab="mean of log CPM",  #does this has any sense? it computes CPM values
      col="gray")
 abline(v=0,col="red")
 dev.off()
@@ -159,7 +162,7 @@ dev.off()
 mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
-#[1] "Reference sample is: 525_120515"
+#[1] "Reference sample is: 594_120522"
 
 #[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
