@@ -277,3 +277,151 @@ gcFull <- withinLaneNormalization(mydataEDA,
 lFull <- withinLaneNormalization(gcFull, 
                                  "length", 
                                  which = "full")#corrects length bias 
+
+#cd has to preceed ARSyN or won't work
+
+mycd_lessbias <- NOISeq::dat(lFull,
+                         type = "cd",
+                         norm = TRUE)
+
+#[1] "Reference sample is: 594_120522"
+
+table(mycd_lessbias@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+#455    168 
+
+
+#############################SOLVE BATCH EFFECT#######################################################
+
+myPCAp_preARSyn <- dat(lFull, 
+                       type = "PCA", 
+                       norm = T, 
+                       logtransf = F)
+
+#plot preArsyn PCA
+
+png("preArsyn.png")
+explo.plot(myPCAp_preARSyn, samples = c(1,2),
+           plottype = "scores",
+           factor = "cogdx")
+dev.off()
+
+##################### TRY normalization ##################### 
+
+#For Uqua
+
+UquaNorm <-NOISeq::uqua(normCounts(lFull),    #OPCION A USAR TMM EN VEZ DE UQUA
+                        long = 1000, 
+                        lc = 0,
+                        k = 0)
+
+noiseqData_Uqua <- NOISeq::readData(data = UquaNorm, 
+                                    factors = factors)
+
+#cd has to preceed ARSyN or won't work
+
+mycd_Uqua <- NOISeq::dat(noiseqData_Uqua,
+                         type="cd",
+                         norm=TRUE)
+#[1] "Warning: 94 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 594_120522"
+
+table(mycd_Uqua@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+#26    597
+
+#ARSyNseq for batch effect solution
+
+#When batch is identified with one of the factors described in the argument factor
+#of the data object, ARSyNseq estimates this effect and removes it by estimating the
+#main PCs of the ANOVA effects associated. 
+#Selected PCs will be those that explain more than the variability proportion 
+#specified in Variability. 
+
+norm_ARSyn <- ARSyNseq(noiseqData_Uqua,              #Biobases eSet object
+                       factor = "cogdx",   #when NULL, all factors are considered
+                       batch = FALSE,      #TRUE if factor argument is batch info
+                       norm = "n",            #type of normalization, "n" if already normalized
+                       logtransf = F)      #If F, log-transformation will be applied before ARSyn
+
+#New PCA for ARSyn data
+
+myPCA_ARSyn <- dat(norm_ARSyn,
+                   type = "PCA",
+                   norm = T,
+                   logtransf = T)
+
+#Plot post-ARSyn
+
+png("postArsyn.png")
+explo.plot(myPCA_ARSyn, samples = c(1,2),
+           plottype = "scores", 
+           factor = "cogdx")
+dev.off()
+
+
+#############################FINAL QUALITY CHECK#######################################################
+
+###Names of features characteristics to add to final data
+
+mylength <- setNames(myannot$length, myannot$ensembl_gene_id)
+
+mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
+
+mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
+
+#Create new noiseq object with re-normalized counts
+
+noiseqData_final <- readData(data = exprs(norm_ARSyn),
+                             gc = mygc,
+                             biotype = mybiotype,
+                             factor = factors,
+                             length = mylength)
+
+mycountsbio_final <- dat(noiseqData_final, 
+                         type = "countsbio", 
+                         factor = "cogdx",
+                         norm=T)
+
+png("CountsFinal.png")
+explo.plot(mycountsbio_final,
+           plottype = "boxplot",
+           samples=1:5)   #this doesnot run still
+dev.off()
+
+#calculate final GC bias
+
+myGCcontent_final <- dat(noiseqData_final,
+                         k = 0, 
+                         type = "GCbias", 
+                         factor = "cogdx",
+                         norm = T)
+
+#Plot final GC bias
+
+png("GCbiasFinal.png",width=1000)
+explo.plot(myGCcontent_final, plottype = "boxplot", samples = 1:5)
+dev.off()
+
+#calculate final length bias
+
+mylenBias <- dat(noiseqData_final, 
+                 k = 0, 
+                 type = "lengthbias", 
+                 factor = "cogdx",
+                 norm=T)
+
+#Plot final length bias
+
+png("lengthbiasFinal.png",width=1000)
+explo.plot(mylenBias, samples = 1:5)
+dev.off()
+
+#Finally, save table
+write.table(final,"filtered_FPKM_matrix_250124.tsv",sep='\t',quote=F)
+#duplicates share everything except the plate
+#Finally, save table
+write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
+#duplicates share everything except the plate
