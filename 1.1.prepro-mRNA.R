@@ -126,11 +126,9 @@ ggplot(factors, aes(x = factor(braaksc))) +
 
 ############################## C. NOISeq object ##############################
 
-#Give format to table for NOIseq purposes
+#Give format to table for NOIseq purposes ------ ------
 
 rownames(expression_counts) <- expression_counts$ensembl_gene_id
-
-#For NOISeq, order of factors$specimenIDs and  colnames(expression_counts)[-1] must match
 
 #Names of features characteristics
 
@@ -154,6 +152,8 @@ noiseqData <- NOISeq::readData(data = expression_counts[-1],#not using 1st col
 
 #Obtain the likely counts of genes, organized by subtype,
 #from the noiseqData object
+
+#Use a same factor variable to all bias detection
 
 mycountsbio <- dat(noiseqData, 
                    type =  "countsbio",  
