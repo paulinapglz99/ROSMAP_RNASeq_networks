@@ -27,7 +27,7 @@ colnames(expression)[1] <-"ensembl_gene_id" #change the name for further filteri
 
 ############################## B. Annotation ##############################
 
-#Generate annotation with ensembl.
+### Generate annotation with ensembl ------ ------
 #First we generate mart object
 
 mart <- useEnsembl("ensembl",                         
@@ -47,6 +47,8 @@ myannot <- getBM(attributes = c("ensembl_gene_id",
 myannot$length <- abs(myannot$end_position-myannot$start_position)
 dim(myannot)
 #[1] 49399     7   #The full annotation has 49410 genes, there's a difference between annotated genes and genes in counts
+
+#Filtering   ------ ------
 
 #left join to further filtering
 
@@ -75,12 +77,6 @@ expression_counts <- expression %>%
 dim(expression_counts)
 #[1] 18848   625
 
-############################## C. NOISeq object ##############################
-
-#Give format to table for NOIseq purposes
-
-rownames(expression_counts) <- expression_counts$ensembl_gene_id
-
 #Obtain factors from metadata
 
 metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_250124.csv") %>% 
@@ -96,6 +92,7 @@ factors <- factors %>%
 dim(factors)
 #[1] 624   4  # this means 624 specimen_IDs and only one factor
 
+
 #Let's explore the metadata
 library(ggplot2)
 
@@ -105,7 +102,7 @@ ggplot(factors, aes(x = factor(cogdx))) +
        x = "Cogdx",
        y = "Frecuencia") +
   theme_bw()
-  
+
 ggplot(factors, aes(x = factor(ceradsc))) +
   geom_bar(fill = "#6495ed", color = "black") +
   labs(title = "Histograma de ceradsc",
@@ -121,6 +118,11 @@ ggplot(factors, aes(x = factor(braaksc))) +
        y = "Frecuencia") +
   theme_bw()
 
+############################## C. NOISeq object ##############################
+
+#Give format to table for NOIseq purposes
+
+rownames(expression_counts) <- expression_counts$ensembl_gene_id
 
 #For NOISeq, order of factors$specimenIDs and  colnames(expression_counts)[-1] must match
 
