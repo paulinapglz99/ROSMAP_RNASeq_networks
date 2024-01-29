@@ -1,125 +1,108 @@
-#Script for preprocessing (annot) and QC of gene expression data with NOISeq package
+#Script for preprocessing, annot and QC of gene expression data
+#Here we use the NOISeq, edgeR and EDAseq packages
 #paulinapglz.99@gmail.com
 #Here we perform:
-## Data preparation
+## Data preparation for NOISeq bias identification
 ## Quality Control & bias removal
 
+####################### PACKAGES ############################## 
+
 pacman::p_load('dplyr', 
-               'biomaRt')
+               'biomaRt',
+               'NOISeq',
+               'edgeR')
 
-############################## A. Get the data ############################## 
+######################## A. Get the data #####################
 
-#Read expression data
+#Read counts data
 #This file was generated in 1.MatchFPKMandClinicalMetadata.R
 
-FPKM <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_new161223.csv') #counts for cogdx = 1, 2, 3, 4 and 5
-dim(FPKM)
+expression <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_new161223.csv') %>%   #counts for cogdx = 1, 2, 3, 4 and 5
+                           as.data.frame()
+dim(expression)
 #[1] 55889   623  #original expression counts have 55889 genes and 623 specimenIDs
+
+colnames(expression)[1] <-"ensembl_gene_id" #change the name for further filtering
 
 ############################## B. Annotation ##############################
 
-#Generate annotation with ensembl. Annotate gene_biotype, GC content
+#Generate annotation with ensembl.
+#First we generate mart object
 
-mart <- useEnsembl("ensembl",
+mart <- useEnsembl("ensembl",                         
                    dataset="hsapiens_gene_ensembl")
 
-#annnotate GC content, length & biotype per transcript
+#We create myannot, with GC content, biotype, info for length & names per transcript
 
 myannot <- getBM(attributes = c("ensembl_gene_id", 
                                 "percentage_gene_gc_content", "gene_biotype",
-                                "start_position","end_position","hgnc_id","hgnc_symbol"),
+                                "start_position","end_position","hgnc_symbol"),
                  filters = "ensembl_gene_id", 
-                 values =  FPKM$gene_id,
+                 values =  expression$ensembl_gene_id,  #annotate the genes in the count matrix 
                  mart = mart)
 
-#Add lenght column
+#Add length column
 
 myannot$length <- abs(myannot$end_position-myannot$start_position)
 dim(myannot)
-#[1] 49410     8   #The full annotation has 49410 genes, there's a difference between annotated genes and genes in counts
+#[1] 49399     7   #The full annotation has 49410 genes, there's a difference between annotated genes and genes in counts
 
-#filter transcripts without annotation
+#left join to further filtering
 
-myannot <- myannot %>% 
-  dplyr::filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
-  distinct(ensembl_gene_id, .keep_all = TRUE) # Keeps only unique rows based on the ensembl_gene_id column
-dim(myannot)
-#[1] 18848     8  #Filtered annotation has 18848 genes
+expression <- myannot %>% left_join(expression, 
+                                    by = "ensembl_gene_id")
+dim(expression)
+#[1] 49399   629
 
-########################### SURE THIS IS NOT NECESSARY, MAY PROBE LATELY#############################
-#Sort myannot's ensembl_gene_id column for NOISeq purposes
-myannot <- myannot[order(myannot$ensembl_gene_id), ]
+#Filter to obtain only protein coding 
 
-dim(myannot)
-#[1] 18848     8  #18848 full annotated protein coding genes with 8 characteristics, difference of 30562 annotated genes
+expression <- expression %>% 
+  filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
+      distinct(ensembl_gene_id, .keep_all = TRUE) # Keeps only unique rows based on the ensembl_gene_id column
 
-########################### SURE THIS IS NOT NECESSARY, MAY PROBE LATELY#############################
+#Obtain new annotation after filtering
 
+myannot <- expression %>% 
+  dplyr::select(1:7)
 
-#Filter count matrix to have only values that match ensembl_gene_id in the myannot dataframe in a new object
+############################## C. NOISeq object ##############################
 
-FPKM_exprots <- FPKM %>%
-  filter(FPKM$gene_id %in% myannot$ensembl_gene_id) %>% 
-  as.data.frame() 
+#Obtain counts 
 
-#Sorts the gene_id column of FPKM_exprots based on the sorted values of ensembl_gene_id:
+expression_counts <- expression %>% 
+  dplyr::select(ensembl_gene_id, 8:ncol(expression))      
+dim(expression_counts)
+#[1] 18848   623
 
-FPKM_exprots <- FPKM_exprots[match(myannot$ensembl_gene_id, FPKM_exprots$gene_id), ] 
+#Give format to table for NOIseq purposes
 
-dim(FPKM_exprots)
-#[1] 18848   623  #18848 protein coding genes from 622 specimenIDs, now annotation and gene counts match in order
+rownames(expression_counts) <- expression_counts$ensembl_gene_id
 
-#read metadata
-RNA_seq_metadata <- vroom::vroom(file = "/datos/rosmap/metadata/ROSMAP_filtered_metadata_forRNAseq.csv")
+#Obtain factors      
 
-#I will delete 2 non-necessary columns for now and make sure it converts to data.frame 
+factors <- data.frame(
+  "specimen_ID" = colnames(expression_counts)[-1],
+  "group" = 1)    #simulated factors
+factors$group <- sample(c(1, 2), size = nrow(factors), replace = TRUE)  #Simulation to give random numbers 1 and 2 to the df de factors
+dim(factors)
+#[1] 622   2 # this means 621 specimen_IDs and only one factor
 
-RNA_seq_metadata <- RNA_seq_metadata %>% 
-  dplyr::select(-individualID, -msex) %>% 
-  as.data.frame()
+#Names of features characteristics
 
-dim(RNA_seq_metadata)
-#[1] 622   3  #622 individualIDs and specimenIDs and 3 characteristics
+mylength <- setNames(myannot$length, myannot$ensembl_gene_id)
 
-################## C. CHECK BIASES ########################################################
+mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
 
-pacman::p_load("NOISeq", 
-               "edgeR")
+mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
-#The lengths of RNA_seq_metadata$specimenID and colnames(FPKM_exprots) must be the same for the noiseq::readData function
-#They actually do at this point [622]
-
-#for the factor format
 #the order of the elements of the factor must coincide with the order of the samples (columns)
 # in the expression data provided. Row number in factor must match with number of cols in data ("FPKM_exprots"). 
 
-# Get indexes to reorder RNA_seq_metadata$specimenID
-specimenID_positions <- match(colnames(FPKM_exprots)[-1], RNA_seq_metadata$specimenID)
-
-# Use indexes to reorder RNA_seq_metadata$specimenID
-RNA_seq_metadata$specimenID <- RNA_seq_metadata$specimenID[specimenID_positions]
-names(RNA_seq_metadata$specimenID) <- colnames(FPKM_exprots)[-1] # sorted according to the order of colnames(FPKM_exprots)
-
-#Assign gene_id rownames to rows in count data
-
-rownames(FPKM_exprots) <- FPKM_exprots$gene_id
-
-#And delete column
-
-FPKM_exprots <- FPKM_exprots[,-1]
-
-#NOISeq needs annotation in t() (don't really get why, but this works like this)
-
-myannot <- t(myannot)
-colnames(myannot) <- myannot[1,]
-
-#Convert to a NOIseq object
-
-noiseqData <- readData(data = FPKM_exprots, 
-                       gc = myannot["percentage_gene_gc_content",],  #%GC in myannot
-                       biotype = myannot["gene_biotype",],          #biotype
-                       factors = RNA_seq_metadata,                 #variables indicating the experimental group for each sample
-                       length =  myannot["length",])               #gene length
+noiseqData <- NOISeq::readData(data = expression_counts[-1],#not using 1st col 
+                       factors = factors,           #variables indicating the experimental group for each sample
+                       gc = mygc,                   #%GC in myannot
+                       biotype = mybiotype,         #biotype
+                       length =  mylength)          #gene length
 
 #1)check expression bias per subtype
 
@@ -127,9 +110,9 @@ noiseqData <- readData(data = FPKM_exprots,
 #from the noiseqData object
 
 mycountsbio <- dat(noiseqData, 
-                  type =  "countsbio",
-                  norm = T, 
-                  factor = NULL)
+                   type =  "countsbio",  
+                   norm = T, 
+                   factor = NULL)
 #Plots
 
 #patients with repeated measures
@@ -138,6 +121,7 @@ explo.plot(mycountsbio, plottype = "boxplot", samples = 1:10)
 dev.off()
 
 #2)check for low count genes
+
 png("lowcountsOri.png")
 explo.plot(mycountsbio, plottype = "barplot", samples = 1:10)
 dev.off()
@@ -145,7 +129,7 @@ dev.off()
 #Histogram of row means
 
 png("lowCountThres.png")
-hist(rowMeans(cpm(FPKM_exprots,log=T)),
+hist(rowMeans(cpm(expression_counts,log=T)),  #esto no corre por alguna razon
      ylab="genes",
      xlab="mean of log CPM",
      col="gray")
@@ -168,17 +152,25 @@ mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
 #[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
-mycd_table <- table(mycd@dat)
-
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 
+#When only 1-type-factor 
 #FAILED PASSED 
-#12    609 
+#10    611 
+
+#When there's two categorical variants in factor
+
+#FAILED PASSED 
+#14    607 
+
+#When using real data
+
+
 
 #Plot for Mvalues
 
 png("MvaluesOri.png")
-explo.plot(mycd,samples=sample(1:ncol(FPKM_exprots),10))
+explo.plot(mycd,samples=sample(1:ncol(expression_counts),10))
 dev.off()
 
 #4)check for length & GC bias
@@ -188,16 +180,21 @@ dev.off()
 # high (more than 70%), the expression depends on the feature
 
 myGCcontent <- dat(noiseqData,
-                   k = 0, type = "GCbias",
-                   factor = "ceradsc")
+                   k = 0,            #A feature is considered to be detected if the corresponding number of read counts is > k. 
+                   type = "GCbias", 
+                   factor = "group")
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
 #[1] "GC content bias detection is to be computed for:"
-#[1] "1" "2" "3" "4"
+#[1] "1" "2"
 
 #Residuals:
 #  Min      1Q  Median      3Q     Max 
 #-9.5011 -1.5303 -0.0613  1.3300  6.4901 
+
+#Residual standard error: 2.972 on 81 degrees of freedom
+#Multiple R-squared:  0.8643,	Adjusted R-squared:  0.8459 
+#F-statistic: 46.92 on 11 and 81 DF,  p-value: < 2.2e-16
 
 png("GCbiasOri.png",width=1000)
 explo.plot(myGCcontent,
@@ -209,14 +206,17 @@ dev.off()
 #have little effect on differential expression analyses to a first approximation
 
 mylengthbias <- dat(noiseqData, 
-                 k = 0,
-                 type = "lengthbias",
-                 factor = "ceradsc")
-
+                    k = 0,
+                    type = "lengthbias",
+                    factor = "group")
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
 #[1] "Length bias detection information is to be computed for:"
-#[1] "1" "2" "3" "4"
+#[1] "1"
+
+#Residual standard error: 10.56 on 82 degrees of freedom
+#Multiple R-squared:  0.2717,	Adjusted R-squared:  0.1829 
+#F-statistic:  3.06 on 10 and 82 DF,  p-value: 0.002402
 
 #Residuals:
 # Min      1Q  Median      3Q     Max 
@@ -234,7 +234,7 @@ dev.off()
 
 myPCA <- dat(noiseqData,
              type = "PCA", 
-             norm = F,
+             norm = T,
              logtransf = F)
 
 #Plot PCA
@@ -242,10 +242,11 @@ myPCA <- dat(noiseqData,
 png("PCA_Ori.png")
 explo.plot(myPCA, samples = c(1,2),
            plottype = "scores",
-           factor = "ceradsc")
+           factor = "group")
 dev.off()
 
-#################SOLVE BIASES######################################################
+
+#################SOLVE BIASES###################################
 
 library(EDASeq)
 
@@ -254,34 +255,241 @@ library(EDASeq)
 #Filtering those genes with average CPM below 1, would be different
 #to filtering by those with average counts below 1. 
 
-countMatrixFiltered <- filtered.data(FPKM_exprots, 
-                                    factor = "cogdx",
-                                    norm = FALSE, 
-                                    depth = NULL, 
-                                    method = 1,
-                                    cpm = 0,
-                                    p.adj = "fdr")
+countMatrixFiltered <- filtered.data(expression_counts[-1], 
+                                     factor = "group",
+                                     norm = T, 
+                                     depth = NULL,
+                                     method = 1, 
+                                     cpm = 0, 
+                                     p.adj = "fdr")
+#why? que me esta quitando?
 
-#14992 features are to be kept for differential expression analysis with filtering method 1
+#Filtering out low count features...
+#14952 features are to be kept for differential expression analysis with filtering method 1
 
-###########################HASTA AQUI VOY ###########################
+#Filter again myannot to have only 
 
-#Filter again myannot 
+myannot <- myannot %>%
+  filter(ensembl_gene_id %in% rownames(countMatrixFiltered))
 
-myannot <- t(myannot) %>% 
-  as.data.frame()
-
-myannot <- filter(myannot, ensembl_gene_id %in% rownames(countMatrixFiltered))
-
-#NOISeq needs annotation in t() (don't really get why, but this works like this)
-
-myannot <- t(myannot) %>% 
-  as.data.frame() 
-
-colnames(myannot) <- myannot[1,]
+##Create EDA object
 
 #all names must match
 
-mydataEDA <- newSeqExpressionSet(counts = as.matrix(countMatrixFiltered),
-  featureData = data.frame(myannot, row.names = myannot$ensembl_gene_id),
-  phenoData = data.frame(RNA_seq_metadata, row.names=RNA_seq_metadata$specimenID))
+mydataEDA <- newSeqExpressionSet(
+  counts = as.matrix(countMatrixFiltered),
+  featureData = data.frame(myannot,
+                           row.names = myannot$ensembl_gene_id),
+  phenoData = data.frame(factors,
+                         row.names=factors$specimen_ID))
+
+#order for less bias
+
+#for gc content
+gcFull <- withinLaneNormalization(mydataEDA, 
+                                  "percentage_gene_gc_content",
+                                  which = "full")#corrects GC bias 
+
+#for length
+lFull <- withinLaneNormalization(gcFull, 
+                                 "length", 
+                                 which = "full")#corrects length bias 
+
+#lFull ya es un objeto S3? con los datos corregidos por length y GC, podria volver a hacer el 
+#diagnostico con NOISeq
+
+##################### TRY normalization ##################### 
+
+#For Uqua
+
+UquaNorm <-NOISeq::uqua(normCounts(lFull),    #OPCION A USAR TMM EN VEZ DE UQUA
+                          long = 1000, 
+                          lc = 0,
+                          k = 0)
+
+noiseqData_Uqua <- NOISeq::readData(data = UquaNorm, 
+                              factors = factors)
+
+#cd has to preceed ARSyN or won't work
+
+mycd_Uqua <- NOISeq::dat(noiseqData_Uqua,
+                    type="cd",
+                    norm=TRUE)
+
+#[1] "Warning: 95 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 525_120515"
+#[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
+
+table(mycd_Uqua@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+#10    611 son los mismos?
+
+#With FPKM normalization
+
+RPKMNorm <- NOISeq::rpkm(normCounts(lFull),
+                      long = 1000, 
+                      lc = 0,
+                      k = 0)
+
+
+noiseqData_RPKM <- NOISeq::readData(data = RPKMNorm, 
+                                    factors= factors)
+
+#cd has to preceed ARSyN or won't work
+
+mycd_RPKM <- NOISeq::dat(noiseqData_RPKM,
+                         type="cd",
+                         norm=TRUE)
+
+#[1] "Warning: 95 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 525_120515"
+#[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
+
+table(mycd_RPKM@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+# 582     39 
+
+#With TMM normalization
+
+TMMNorm <-NOISeq::tmm(normCounts(lFull),    #OPCION A USAR TMM EN VEZ DE UQUA
+                        long = 1000, 
+                        lc = 0,
+                        k = 0)
+
+noiseqData_TMM <- NOISeq::readData(data = TMMNorm, 
+                                    factors = factors)
+
+#cd has to preceed ARSyN or won't work
+
+mycd_TMM <- NOISeq::dat(noiseqData_TMM,
+                         type="cd",
+                         norm=TRUE)
+
+#[1] "Warning: 95 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 525_120515"
+#[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
+
+table(mycd_TMM@dat$DiagnosticTest[,  "Diagnostic Test"])
+
+#FAILED PASSED 
+#564     57 
+
+#At this moment, any of the normalization makes data pass the Diagnostic Test
+
+#############################SOLVE BATCH EFFECT#######################################################
+
+myPCAp_preARSyn <- dat(noiseqData_Uqua, 
+                      type = "PCA", 
+                      norm = T, 
+                      logtransf = F)
+
+#plot preArsyn PCA
+
+png("preArsyn.png")
+explo.plot(myPCAp_preARSyn, samples = c(1,2),
+           plottype = "scores",
+           factor = "group")
+dev.off()
+
+#ARSyNseq for batch effect solution
+
+#################ESTO AUN NO CORRE###################
+
+#When batch is identified with one of the factors described in the argument factor
+#of the data object, ARSyNseq estimates this effect and removes it by estimating the
+#main PCs of the ANOVA effects associated. 
+#Selected PCs will be those that explain more than the variability proportion 
+#specified in Variability. 
+
+norm_ARSyn <- ARSyNseq(noiseqData_Uqua,     #Biobases eSet object
+                       factor = "group",  #when NULL, all factors are considered
+                       batch = FALSE,      #TRUE if factor argument is batch info
+                       norm = "n",     #type of normalization, "n" if already normalized
+                       logtransf = F)  #If F, log-transformation will be applied before ARSyn
+
+
+ARSyn_no_norm <- ARSyNseq(noiseqData,     #Biobases eSet object
+                       factor = "group",  #when NULL, all factors are considered
+                       batch = FALSE,      #TRUE if factor argument is batch info
+                       norm = "n",     #type of normalization, "n" if already normalized
+                       logtransf = F)  #If F, log-transformation will be applied before ARSyn
+
+
+#ERROR, when factor = NULL
+#It gives an error when factor = NULL and norm is "n", you must give a factor
+#Error in apply(sub, 2, mean) : dim(X) must have a positive length
+
+#I also tried changing the normalization type, and giving a different noiseqData (the normalized one)
+
+#New PCA for ARSyn data
+
+myPCA_ARSyn <- dat(ARSyn_no_norm,
+             type = "PCA",
+             norm = T,
+             logtransf = T)
+
+#Plot post-ARSyn
+
+png("postArsyn.png")
+explo.plot(myPCA_ARSyn, samples = c(1,2),
+           plottype = "scores", 
+           factor = "group")
+dev.off()
+
+#############################FINAL QUALITY CHECK#######################################################
+
+#Create new noiseq object with re-normalized counts
+
+noiseqData_final <- readData(data = exprs(ARSyn_no_norm),
+                      gc = myannot[,1:2],
+                      biotype = myannot[,c(1,3)],
+                      factor = factors,
+                      length = myannot[,c(1,8)])
+
+mycountsbio_final <- dat(noiseqData, 
+                   type = "countsbio", 
+                   factor = "group",
+                  norm=T)
+
+png("CountsFinal.png")
+explo.plot(mycountsbio_final,
+           plottype = "boxplot",
+           samples=1:5)   #this doesnot run still
+dev.off()
+
+#calculate final GC bias
+
+myGCcontent_final <- dat(noiseqData,
+                         k = 0, 
+                         type = "GCbias", 
+                         factor = "group",
+                         norm=T)
+
+#Plot final GC bias
+
+png("GCbiasFinal.png",width=1000)
+par(mfrow=c(1,5))
+explo.plot(myGCcontent_final, plottype = "boxplot", samples = 1:5)
+dev.off()
+
+#calculate final length bias
+
+mylenBias <- dat(noiseqData, k = 0, type = "lengthbias", 
+                 factor = "group",
+                 norm=T)
+
+#Plot final length bias
+
+png("lengthbiasFinal.png",width=1000)
+par(mfrow=c(1,5))
+sapply(1:5,function(x) explo.plot(mylenBias, samples = x))
+dev.off()
+
+#Finally, save table
+write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
+#duplicates share everything except the plate
+#Finally, save table
+write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
+#duplicates share everything except the plate
