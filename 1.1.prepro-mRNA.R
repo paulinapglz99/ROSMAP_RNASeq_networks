@@ -62,6 +62,8 @@ dim(expression)
 expression <- expression %>% 
   filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
   distinct(ensembl_gene_id, .keep_all = TRUE) # Keeps only unique rows based on the ensembl_gene_id column
+dim(expression)
+#[1] 18848   631
 
 #Obtain new annotation after filtering
 
@@ -84,38 +86,42 @@ metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_250124.
 dim(metadata)
 #[1] 624   4
 
+#I do this to make sure the rowlength of factors match with the counts columns
+
 factors <- data.frame(
   "specimenID" = colnames(expression_counts)[-1])   
 
 factors <- factors %>% 
   left_join(metadata, by = "specimenID")
 dim(factors)
-#[1] 624   4  # this means 624 specimen_IDs and only one factor
+#[1] 624   4 # this means 624 specimen_IDs 
 
+#Let's explore the metadata    ------ ------
 
-#Let's explore the metadata
 library(ggplot2)
+
+#Frequency of individuals by cogdx
 
 ggplot(factors, aes(x = factor(cogdx))) +
   geom_bar(fill = "#6495ed", color = "black") +
-  labs(title = "Histograma de cogdx",
-       x = "Cogdx",
-       y = "Frecuencia") +
+  labs(title = "cogdx clinilcal diagnostic variable histogram",
+       x = "cogdx",
+       y = "Frequency") +
   theme_bw()
 
 ggplot(factors, aes(x = factor(ceradsc))) +
   geom_bar(fill = "#6495ed", color = "black") +
-  labs(title = "Histograma de ceradsc",
+  labs(title = "ceradsc pathology variable histogram",
        x = "ceradsc",
-       y = "Frecuencia") +
+       y = "Frequency") +
   theme_bw()
 
 
 ggplot(factors, aes(x = factor(braaksc))) +
   geom_bar(fill = "#6495ed", color = "black") +
-  labs(title = "Histograma de braaksc",
+  labs(title = "braaksc pathology variable histogram",
        x = "braaksc",
-       y = "Frecuencia") +
+       y = "Frequency") +
   theme_bw()
 
 ############################## C. NOISeq object ##############################
