@@ -414,7 +414,7 @@ dev.off()
 
 #############################FINAL QUALITY CHECK#######################################################
 
-###Names of features characteristics to add to final data
+#Names of features characteristics to add to final data
 
 mylength <- setNames(myannot$length, myannot$ensembl_gene_id)
 
@@ -422,7 +422,7 @@ mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
 
 mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
-#Create new noiseq object with re-normalized counts
+#Create new noiseq object with re-normalized counts 
 
 noiseqData_final <- NOISeq::readData(exprs(norm_ARSyn),
                              gc = mygc,
@@ -473,10 +473,13 @@ png("lengthbiasFinal.png",width=1000)
 explo.plot(mylenBias, samples = 1:5)
 dev.off()
 
-#Finally, save table
-write.table(final,"filtered_FPKM_matrix_250124.tsv",sep='\t',quote=F)
-#duplicates share everything except the plate
-#Finally, save table
-write.table(final,"RNAseqnormalized.tsv",sep='\t',quote=F)
+#Save new count matriz --- ---
 
-#END
+final_counts <- exprs(noiseqData_final) %>% 
+  as.data.frame()
+dim(final_counts)
+#[1] 14951   624  #This means 624 specimenIDs with 14951 features
+
+#Finally, save table
+vroom::vroom_write(final_counts, file = "/datos/rosmap/FPKM_data/QCed_count_matrixfiltered_290124.tsv")
+#END --- ---
