@@ -148,43 +148,7 @@ noiseqData <- NOISeq::readData(data = expression_counts[-1],#not using 1st col
                                biotype = mybiotype,         #biotype
                                length =  mylength)          #gene length
 
-#1)check expression bias per subtype
-
-#Obtain the likely counts of genes, organized by subtype,
-#from the noiseqData object
-
-#Use a same factor variable to all bias detection
-
-mycountsbio <- dat(noiseqData, 
-                   type =  "countsbio",  
-                   norm = T, 
-                   factor = NULL)
-#Plots
-
-#patients with repeated measures
-png("CountsOri.png")
-explo.plot(mycountsbio, plottype = "boxplot", samples = 1:10)
-dev.off()
-
-#2)check for low count genes
-
-png("lowcountsOri.png")
-explo.plot(mycountsbio, plottype = "barplot", samples = 1:10)
-dev.off()
-
-#Histogram of row means
-
-#esto no corre por alguna razon
-
-png("lowCountThres.png")
-hist(rowMeans(cpm(expression_counts,log=T)),
-     ylab="genes",
-     xlab="mean of log CPM",  #does this has any sense? it computes CPM values
-     col="gray")
-abline(v=0,col="red")
-dev.off()
-
-#3)check for transcript composition bias
+# 0) Diagnostic of data
 
 #each sample "s" is compared to a reference "r" (which can be arbitrarily chosen).
 #by computing M values=log2(counts = countsr). 
@@ -192,6 +156,7 @@ dev.off()
 #Confidence intervals for the M median is computed by bootstrapping.
 #If the median of M values for each comparison is not in the CI, the deviation
 # of the sample is significant, therefore, normalization is needed 
+#"cd" means "Cumulative Distribution."
 
 mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
@@ -205,7 +170,53 @@ table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 #When using real data
 
 #FAILED PASSED 
-# 6    617
+# 6    617 
+#Good but not perfect
+
+#1)check expression bias per subtype
+
+#Obtain the likely counts of genes, organized by subtype,
+#from the noiseqData object
+
+#Use a same factor variable to all bias detection
+
+mycountsbio <- dat(noiseqData, 
+                   type =  "countsbio",  
+                   norm = T,      #T when already normalized counts as input
+                   factor = NULL) #When NULL, all factors
+#Plots
+
+png("CountsOri.png")
+explo.plot(mycountsbio, plottype = "boxplot", samples = 1:10)
+dev.off()
+
+#2)check for low count genes
+
+png("lowcountsOri.png")
+explo.plot(mycountsbio, plottype = "barplot", samples = 1:10)
+dev.off()
+
+#Histogram of row means
+
+#Warning, this histogram does not run properly
+png("lowCountThres.png")
+hist(rowMeans(cpm(as.matrix(expression_counts,log=T))), #renormalizes for CPM values
+     ylab="genes",
+     xlab="mean of log CPM",  
+     col="gray")
+abline(v=0,col="red")
+dev.off()
+
+#Trying w/ggplot
+
+ggplot(data = data.frame(logCPM = rowMeans(cpm(as.matrix(expression_counts), log = TRUE))),
+       aes(x = logCPM)) +
+  geom_histogram(binwidth = 0.1, fill = "gray", color = "white") +
+  labs(x = "Mean of log CPM", y = "Genes") +
+  theme_minimal() +
+  geom_vline(xintercept = 0, color = "red")
+
+#3)check for transcript composition bias
 
 #Plot for Mvalues
 
@@ -273,7 +284,8 @@ dev.off()
 #Filtering those genes with average CPM below 1, would be different
 #to filtering by those with average counts below 1. 
 
-#why? que me esta quitando? como calcula los CPM si ya estan normalizados 
+#This function renormalizes and filters features to only have the ones with
+#CPM>1
 
 countMatrixFiltered <- filtered.data(expression_counts[-1], 
                                      factor = "cogdx",
@@ -300,6 +312,10 @@ mydataEDA <- newSeqExpressionSet(
   phenoData = data.frame(factors,
                          row.names=factors$specimenID))
 
+#If you're re-normalizing, there's a warning, 
+#Warning message:
+#  In validityMethod(object) : 'counts' contains non-integer numbers
+
 #order for less bias
 
 #for gc content
@@ -312,7 +328,7 @@ lFull <- withinLaneNormalization(gcFull,
                                  "length", 
                                  which = "full")#corrects length bias 
 
-#cd has to preceed ARSyN or won't work
+#cd Diagnostic test has to preceed ARSyN or it won't work
 
 mycd_lessbias <- NOISeq::dat(lFull,
                          type = "cd",
@@ -325,27 +341,26 @@ table(mycd_lessbias@dat$DiagnosticTest[,  "Diagnostic Test"])
 #FAILED PASSED 
 #455    168 
 
-
 #############################SOLVE BATCH EFFECT#######################################################
 
-myPCAp_preARSyn <- dat(lFull, 
+myPCA_preARSyn <- dat(lFull, 
                        type = "PCA", 
                        norm = T, 
                        logtransf = F)
 
 #plot preArsyn PCA
 
-png("preArsyn.png")
-explo.plot(myPCAp_preARSyn, samples = c(1,2),
+png("preArsynPCA.png")
+explo.plot(myPCA_preARSyn, samples = c(1,2),
            plottype = "scores",
            factor = "cogdx")
 dev.off()
 
 ##################### TRY normalization ##################### 
 
-#For Uqua
+#Use Uqua (UpperQuartile) for renormalization
 
-UquaNorm <-NOISeq::uqua(normCounts(lFull),    #OPCION A USAR TMM EN VEZ DE UQUA
+UquaNorm <-NOISeq::uqua(normCounts(lFull),
                         long = 1000, 
                         lc = 0,
                         k = 0)
@@ -360,6 +375,8 @@ mycd_Uqua <- NOISeq::dat(noiseqData_Uqua,
                          norm=TRUE)
 #[1] "Warning: 94 features with 0 counts in all samples are to be removed for this analysis."
 #[1] "Reference sample is: 594_120522"
+
+#[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
 table(mycd_Uqua@dat$DiagnosticTest[,  "Diagnostic Test"])
 
@@ -389,12 +406,11 @@ myPCA_ARSyn <- dat(norm_ARSyn,
 
 #Plot post-ARSyn
 
-png("postArsyn.png")
+png("postArsynPCA.png")
 explo.plot(myPCA_ARSyn, samples = c(1,2),
            plottype = "scores", 
            factor = "cogdx")
 dev.off()
-
 
 #############################FINAL QUALITY CHECK#######################################################
 
@@ -408,21 +424,25 @@ mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
 #Create new noiseq object with re-normalized counts
 
-noiseqData_final <- readData(data = exprs(norm_ARSyn),
+noiseqData_final <- NOISeq::readData(exprs(norm_ARSyn),
                              gc = mygc,
                              biotype = mybiotype,
-                             factor = factors,
+                             factors = factors,
                              length = mylength)
+
+#Check for bias with renormalized
 
 mycountsbio_final <- dat(noiseqData_final, 
                          type = "countsbio", 
-                         factor = "cogdx",
-                         norm=T)
+                         norm=T, 
+                         factor = NULL)
+
+#Plot final plots
 
 png("CountsFinal.png")
 explo.plot(mycountsbio_final,
            plottype = "boxplot",
-           samples=1:5)   #this doesnot run still
+           samples = 1:10)
 dev.off()
 
 #calculate final GC bias
