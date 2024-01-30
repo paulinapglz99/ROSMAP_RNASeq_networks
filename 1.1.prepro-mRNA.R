@@ -255,7 +255,7 @@ mylengthbias <- dat(noiseqData,
 
 #Plot length bias
 
-png("lengthbiasOri.png")
+png("lengthbiasOri.png", width=1000)
 explo.plot(mylengthbias, 
            samples = NULL, 
            toplot = "global")
@@ -343,20 +343,7 @@ table(mycd_lessbias@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #############################SOLVE BATCH EFFECT#######################################################
 
-myPCA_preARSyn <- dat(lFull, 
-                       type = "PCA", 
-                       norm = T, 
-                       logtransf = F)
-
-#plot preArsyn PCA
-
-png("preArsynPCA.png")
-explo.plot(myPCA_preARSyn, samples = c(1,2),
-           plottype = "scores",
-           factor = "cogdx")
-dev.off()
-
-##################### TRY normalization ##################### 
+# Normalization --- ---
 
 #Use Uqua (UpperQuartile) for renormalization
 
@@ -383,7 +370,7 @@ table(mycd_Uqua@dat$DiagnosticTest[,  "Diagnostic Test"])
 #FAILED PASSED 
 #26    597
 
-#ARSyNseq for batch effect solution
+#ARSyNseq for batch effect solution --- ---
 
 #When batch is identified with one of the factors described in the argument factor
 #of the data object, ARSyNseq estimates this effect and removes it by estimating the
@@ -397,7 +384,7 @@ norm_ARSyn <- ARSyNseq(noiseqData_Uqua,              #Biobases eSet object
                        norm = "n",            #type of normalization, "n" if already normalized
                        logtransf = F)      #If F, log-transformation will be applied before ARSyn
 
-#New PCA for ARSyn data
+#New PCA for ARSyn data corrected data
 
 myPCA_ARSyn <- dat(norm_ARSyn,
                    type = "PCA",
@@ -445,6 +432,13 @@ explo.plot(mycountsbio_final,
            samples = 1:10)
 dev.off()
 
+
+#Low counts 
+
+png("lowcountsFinal.png")
+explo.plot(mycountsbio, plottype = "barplot", samples = 1:10)
+dev.off()
+
 #calculate final GC bias
 
 myGCcontent_final <- dat(noiseqData_final,
@@ -481,5 +475,5 @@ dim(final_counts)
 #[1] 14951   624  #This means 624 specimenIDs with 14951 features
 
 #Finally, save table
-vroom::vroom_write(final_counts, file = "/datos/rosmap/FPKM_data/QCed_count_matrixfiltered_290124.tsv")
+vroom::vroom_write(final_counts, file = "/datos/rosmap/FPKM_data/QCed_count_matrixfiltered_ROSMAP_290124.tsv")
 #END --- ---
