@@ -65,6 +65,18 @@ counts_matrix <- counts_matrix %>%
 dim(counts_matrix)
 #[1] 55889   625
 
+#Generate new variable based on ante & post mortem data ----------
+
+RNA_seq_metadata <- RNA_seq_metadata %>%
+  mutate(final_diagnostic = case_when(
+    cogdx == 1 & ceradsc == 4 ~ "NCI",
+    cogdx == 2 & (ceradsc == 1 | ceradsc == 2) ~ "AD",
+    cogdx == 2 ~ "MCI",
+    TRUE ~ NA_character_  # Handle no-specified cases
+  ))
+
+dx_counts <- table(RNA_seq_metadata$final_diagnostic, useNA = "always") %>% as.data.frame()
+
 #Save filtered metadata
 
 vroom::vroom_write(RNA_seq_metadata, file = '/datos/rosmap/metadata/RNA_seq_metadata_250124.csv')
