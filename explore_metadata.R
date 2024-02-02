@@ -1,4 +1,5 @@
 #Explore metadata
+#paulinapglz.99@gmail.com
 
 pacman::p_load(corrplot, 
               dplyr)
@@ -15,13 +16,21 @@ metadata <- metadata %>%
   dplyr::select("individualID", "specimenID","msex", "educ",                
                 "race", "spanish", "apoe_genotype",    
                  "braaksc", "ceradsc",
-                "cogdx", "dcfdx_lv") %>% 
-  
+                "cogdx", "dcfdx_lv")
+
+#Filter metadata just for corplot purposes  
+
 cor_metadata <- metadata[3:11]
 
 cor_metadata <- cor_metadata%>%
   filter(!is.na(cogdx) & !is.na(apoe_genotype))
 
+#Correlation table
+
 C<- cor(cor_metadata)
 
-corrplot(C)
+#Corrplots
+
+corrplot(C, method = 'number')
+
+corrplot(C, method = 'square', order = 'FPC', type = 'lower', diag = FALSE)
