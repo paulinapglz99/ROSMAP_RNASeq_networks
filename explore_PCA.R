@@ -17,6 +17,8 @@ counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_2501
 metadata <- vroom::vroom(file = "/datos/rosmap/metadata/cli_bio_metadata.csv")
 
 #Manage data --- ---
+#If your data is not already scaled, then do Steps 1 and 2, if you don't need it
+#skip to Step 3
 
 #Step 1. Centering the Data
 
@@ -33,16 +35,35 @@ apply(counts_scaled_centered, 2, sd)
 
 #Add rownames
 
-rownames(counts_scaled) <- counts$gene_id
+rownames(counts_scaled_centered) <- counts$gene_id
+
+############################PCA 
 
 #Step 3. Data Reduction
 
-pca_counts <- prcomp(counts_scaled_centered) #yay
+mat <- as.matrix(counts[,-1])
+rownames(mat) <- counts$gene_id
+
+pca <- prcomp(t(mat)) #we t() to have samples in rows
 
 #Scree plot
 
-plot(pca_counts, main = "")
+plot(pca, main = "")
 
 #Loading Plot
 
-barplot(pca_counts$rotation[,1], main = "")
+barplot(pca$rotation[,1], main = "")
+
+#PCA to table
+
+pca_df <- pca$rotation
+pca_df %>%
+  as_tibble() %>% 
+  left_join(pca_counts, metadata, by = )
+
+pca_df %>% 
+  filter(PC2>-0.5) %>%  #trampeando
+  ggplot() +
+  aes(x = PC1, y = PC2, color= as.factor(msex)) +
+  geom_point() +
+  geom_text(mapping = aes(label = sample))
