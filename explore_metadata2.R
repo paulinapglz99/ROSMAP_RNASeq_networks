@@ -26,23 +26,20 @@ counts_centered <- scale(counts[-1], scale = F, center = T)
 
 #Step 2. #2. Scale the data
 
-counts_scaled_centered <- scale(counts[-1], scale = T, center = F) 
+counts_scaled_centered <- scale(counts_centered, scale = T, center = F) 
 
 #This scaling has the effect of making the column standard deviations equal to one
-#(or near to 1)
 
 apply(counts_scaled_centered, 2, sd)
-
-#Add rownames
-
-rownames(counts_scaled_centered) <- counts$gene_id
 
 ############################PCA 
 
 #Step 3. Data Reduction
 
-mat <- as.matrix(counts[,-1])
-rownames(mat) <- counts$gene_id
+mat <- as.matrix(counts_scaled_centered)
+rownames(mat) <- counts$gene_id  #Add rownames
+
+#Calculate PCA
 
 pca <- prcomp(t(mat)) #we t() to have samples in rows
 
