@@ -56,7 +56,7 @@ barplot(pca$rotation[,1], main = "")
 
 #PCA to table
 
-pca_df <- pca$rotation
+pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column()
 pca_df %>%
   as_tibble() %>% 
   left_join(pca_counts, metadata, by = )
