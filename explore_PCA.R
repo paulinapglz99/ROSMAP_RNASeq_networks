@@ -2,7 +2,7 @@
 
 ###Libraries --- ---
 
-pacman::p_load(dplyr)
+pacman::p_load(tidyverse)
 
 #The steps to carry out PCA are:
 #1. Center the data
@@ -46,24 +46,26 @@ rownames(mat) <- counts$gene_id
 
 pca <- prcomp(t(mat)) #we t() to have samples in rows
 
-#Scree plot
+#Elbow (Scree plot)
 
-plot(pca, main = "")
+plot(pca)
 
 #Loading Plot
 
-barplot(pca$rotation[,1], main = "")
+barplot(pca$rotation[,1])
 
 #PCA to table
 
-pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column()
-pca_df %>%
+pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column(var = 'specimenID')
+pca_df <- pca_df %>%
   as_tibble() %>% 
-  left_join(pca_counts, metadata, by = )
+  left_join(metadata)
+
+#Plot PCA
 
 pca_df %>% 
-  filter(PC2>-0.5) %>%  #trampeando
+  filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
   ggplot() +
-  aes(x = PC1, y = PC2, color= as.factor(msex)) +
+  aes(x = PC1, y = PC2, color= as.factor(ceradsc)) +
   geom_point() +
-  geom_text(mapping = aes(label = sample))
+  geom_text(mapping = aes(label = specimenID))
