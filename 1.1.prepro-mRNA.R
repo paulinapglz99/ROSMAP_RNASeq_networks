@@ -276,6 +276,9 @@ explo.plot(myPCA, samples = c(1,2),
            factor = "cogdx")
 dev.off()
 
+#Save PCA file
+
+#saveRDS(myPCA, "/datos/rosmap/PCAs/PCA_ori_preArsyn.rsd")
 
 #################SOLVE BIASES###################################
 
@@ -398,6 +401,10 @@ explo.plot(myPCA_ARSyn, samples = c(1,2),
            plottype = "scores", 
            factor = "cogdx")
 dev.off()
+
+#Save PCA file
+
+#saveRDS(myPCA, "/datos/rosmap/PCAs/PCA_post_Arsyn.rsd")
 
 #############################FINAL QUALITY CHECK#######################################################
 
