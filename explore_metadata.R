@@ -13,11 +13,15 @@ metadata <- metadata %>%
   filter(assay == 'rnaSeq', 
          organ == 'brain') %>% 
   dplyr::select("individualID", "specimenID","msex", "educ",                
-                "race", "spanish", "apoe_genotype", "age_at_visit_max",    
-                 "age_death", "braaksc", "ceradsc",
-                "cogdx", "dcfdx_lv")
+                "race", "spanish", "apoe_genotype",    
+                 "braaksc", "ceradsc",
+                "cogdx", "dcfdx_lv") %>% 
+  
+cor_metadata <- metadata[3:11]
 
-cor_metadata<- metadata[3:13]
+cor_metadata <- cor_metadata%>%
+  filter(!is.na(cogdx) & !is.na(apoe_genotype))
 
-cor(cor_metadata)
+C<- cor(cor_metadata)
 
+corrplot(C)
