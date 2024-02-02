@@ -37,3 +37,12 @@ rownames(counts_scaled) <- counts$gene_id
 
 #Step 3. Data Reduction
 
+pca_counts <- prcomp(counts_scaled_centered) #yay
+
+#Scree plot
+
+plot(pca_counts, main = "")
+
+#Loading Plot
+
+barplot(pca_counts$rotation[,1], main = "")
