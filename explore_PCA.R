@@ -78,6 +78,15 @@ variance_table_95 <- variance_table %>%
 
 barplot(pca$rotation[,1], col = '#B48EAE')
 
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+                           PC1_Loadings = pca$rotation[, 1]) 
+
+#Order mayor to minor
+
+loading_data_PC1 <- loading_data_PC1 %>% 
+  arrange(desc(PC1_Loadings))
+
 #PCA to table
 
 pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column(var = 'specimenID')
