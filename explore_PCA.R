@@ -62,8 +62,7 @@ cumulative_percentage <- cumsum(pca$sdev^2 / sum(pca$sdev^2) * 100)
 variance_table <- data.frame(
   PC = 1:length(pca$sdev),
   Variance_Percentage = pca$sdev^2 / sum(pca$sdev^2) * 100,
-  cumulative_Percentage = cumulative_percentage
-)
+  cumulative_Percentage = cumulative_percentage)
 
 #Note: The percentage of variance is calculated as the squared singular value
 #of each PC divided by the sum of squared singular values, multiplied by 100.
@@ -73,19 +72,6 @@ variance_table_95 <- variance_table %>%
 
 #Save table
 #vroom::vroom_write(variance_table_95, file = "variance95.tsv")
-
-#Loading Plot
-
-barplot(pca$rotation[,1], col = '#B48EAE')
-
-# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
-loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
-                           PC1_Loadings = pca$rotation[, 1]) 
-
-#Order mayor to minor
-
-loading_data_PC1 <- loading_data_PC1 %>% 
-  arrange(desc(PC1_Loadings))
 
 #PCA to table
 
@@ -103,16 +89,20 @@ pca_df %>%
   ggplot() +
   aes(x = PC1, y = PC2, colour = as.factor(cogdx)) +
   geom_point() +
-  geom_text(mapping = aes(label = specimenID))
+  geom_text(mapping = aes(label = specimenID)) +
+  labs(title = "Gráfico de Dispersión PCA",
+       subtitle = "de PC1 vs PC2", x = "PC1 (17.08%)", y = "PC2 (12.08%)")
 
 #Plot PC1 and PC3
 
 pca_df %>% 
-  #filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
   ggplot() +
   aes(x = PC1, y = PC3) +
   geom_point() +
-  geom_text(mapping = aes(label = specimenID))
+  geom_text(mapping = aes(label = specimenID)) +
+  labs(title = "Gráfico de Dispersión PCA",
+       subtitle = "de PC1 vs PC3", x = "PC1 (17.08%)", y = "PC3 (9.8%)")
+
 
 #Plot PC2 and PC3
 
@@ -121,4 +111,28 @@ pca_df %>%
   ggplot() +
   aes(x = PC2, y = PC3) +
   geom_point() +
-  geom_text(mapping = aes(label = specimenID))
+  geom_text(mapping = aes(label = specimenID))  +
+  labs(title = "Gráfico de Dispersión PCA",
+       subtitle = "de PC2 vs PC3", x = "PC1 (12.08%)", y = "PC3 (9.8%)")
+
+#Loading Plot
+
+barplot(pca$rotation[,1], col = '#B48EAE')
+
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+                               PC1_Loadings = pca$rotation[, 1]) %>% 
+                           mutate(loadings_Percentage = PC1_Loadings^2 / sum(PC1_Loadings^2) * 100, 
+                                 cumulative_percentages = cumsum(PC1_Loadings^2 / sum(PC1_Loadings^2) * 100)) 
+
+#Order mayor to minor
+
+loading_data_PC1 <- loading_data_PC1 %>% 
+  arrange(desc(PC1_Loadings))
+
+
+# Create a data frame with PC number and percentage of variance
+variance_table <- data.frame(
+  PC = 1:length(pca$sdev),
+  Variance_Percentage = pca$sdev^2 / sum(pca$sdev^2) * 100,
+  cumulative_Percentage = cumulative_percentage)
