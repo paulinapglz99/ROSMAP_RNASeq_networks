@@ -124,15 +124,3 @@ loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
                                PC1_Loadings = pca$rotation[, 1]) %>% 
                            mutate(loadings_Percentage = PC1_Loadings^2 / sum(PC1_Loadings^2) * 100, 
                                  cumulative_percentages = cumsum(PC1_Loadings^2 / sum(PC1_Loadings^2) * 100)) 
-
-#Order mayor to minor
-
-loading_data_PC1 <- loading_data_PC1 %>% 
-  arrange(desc(PC1_Loadings))
-
-
-# Create a data frame with PC number and percentage of variance
-variance_table <- data.frame(
-  PC = 1:length(pca$sdev),
-  Variance_Percentage = pca$sdev^2 / sum(pca$sdev^2) * 100,
-  cumulative_Percentage = cumulative_percentage)
