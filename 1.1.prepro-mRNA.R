@@ -1,6 +1,7 @@
+#
+#Script 1.1prepro-mRNA.R
 #Script for annotation, bias detection and correction (QC) 
 #of already normalized gene expression data
-
 #By paulinapglz.99@gmail.com
 
 ####################### PACKAGES ############################## 
@@ -18,12 +19,12 @@ pacman::p_load('dplyr',
 #Read counts data
 #This file was generated in 1.MatchFPKMandClinicalMetadata.R
 
-expression <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv') %>%   #counts for all cogdx but 6
+counts <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv') %>%   #counts for all cogdx but 6
   as.data.frame()
-dim(expression)
+dim(counts)
 #[1] 55889   625  #original expression counts have 55889 genes and 625 specimenIDs
 
-colnames(expression)[1] <-"ensembl_gene_id" #change the name for further filtering
+colnames(counts)[1] <-"ensembl_gene_id" #change the name for further filtering
 
 ############################## B. Annotation ##############################
 
@@ -52,83 +53,70 @@ dim(myannot)
 
 #left join to further filtering
 
-expression <- myannot %>% left_join(expression, 
+counts <- myannot %>% left_join(counts, 
                                     by = "ensembl_gene_id")
-dim(expression)
+dim(counts)
 #[1] 49399   631
 
 #Filter to obtain only protein coding 
 
-expression <- expression %>% 
+counts <- counts %>% 
   filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
   distinct(ensembl_gene_id, .keep_all = TRUE) # Keeps only unique rows based on the ensembl_gene_id column
-dim(expression)
+dim(counts)
 #[1] 18848   631
 
 #Obtain new annotation after filtering
 
-myannot <- expression %>% 
+myannot <- counts %>% 
   dplyr::select(1:7)
 dim(myannot)
 #[1] 18848     7
 
 #Obtain counts 
 
-expression_counts <- expression %>% 
-  dplyr::select(ensembl_gene_id, 8:ncol(expression))      
+expression_counts <- counts %>% 
+  dplyr::select(ensembl_gene_id, 8:ncol(counts))      
 dim(expression_counts)
 #[1] 18848   625
 
+#Save gene names
+gene_names <- expression_counts$ensembl_gene_id
+
+#Scale and center data --- --- 
+
+#If your data is not already scaled, scale(scale = T) if you don't need it
+#just center with scale(center = T)
+
+scaled_expression_counts <- scale(expression_counts[-1], scale = T, center = T)  %>% #omited first column as it contains only names
+  as.data.frame()
+
+#This centering and scaling together has the effect of making the column standard 
+#deviations equal to 1. 
+
+apply(scaled_expression_counts, 2, sd)
+
 #Obtain factors from metadata
 
-metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_250124.csv") %>% 
-  dplyr::select(specimenID, cogdx, ceradsc, braaksc)
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_080224.csv")
 dim(metadata)
-#[1] 624   4
+#[1] 624   5
 
 #I do this to make sure the rowlength of factors match with the counts columns
 
 factors <- data.frame(
-  "specimenID" = colnames(expression_counts)[-1])   
+  "specimenID" = colnames(expression_counts))   
 
 factors <- factors %>% 
   left_join(metadata, by = "specimenID")
 dim(factors)
-#[1] 624   4 # this means 624 specimen_IDs 
-
-#Let's explore the metadata    ------ ------
-
-library(ggplot2)
-
-#Frequency of individuals by cogdx
-
-ggplot(factors, aes(x = factor(cogdx))) +
-  geom_bar(fill = "#6495ed", color = "black") +
-  labs(title = "cogdx clinilcal diagnostic variable histogram",
-       x = "cogdx",
-       y = "Frequency") +
-  theme_bw()
-
-ggplot(factors, aes(x = factor(ceradsc))) +
-  geom_bar(fill = "#6495ed", color = "black") +
-  labs(title = "ceradsc pathology variable histogram",
-       x = "ceradsc",
-       y = "Frequency") +
-  theme_bw()
-
-
-ggplot(factors, aes(x = factor(braaksc))) +
-  geom_bar(fill = "#6495ed", color = "black") +
-  labs(title = "braaksc pathology variable histogram",
-       x = "braaksc",
-       y = "Frequency") +
-  theme_bw()
+#[1] 624   5 # this means 624 specimen_IDs 
 
 ############################## C. NOISeq object ##############################
 
 #Give format to table for NOIseq purposes ------ ------
 
-rownames(expression_counts) <- expression_counts$ensembl_gene_id
+rownames(expression_counts) <- gene_names
 
 #Names of features characteristics
 
@@ -138,11 +126,15 @@ mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
 
 mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
+#Create NOISeq object --- ---
+
+#NOTE: I create here two NOISeq objects, one is only for building a PCA, the other one
+#will be used for
 #For NOISeq, order of factors$specimenIDs and  colnames(expression_counts)[-1] must match
 #> identical(colnames(expression_counts)[-1], factors$specimenID)
 #[1] TRUE
 
-noiseqData <- NOISeq::readData(data = expression_counts[-1],#not using 1st col 
+noiseqData <- NOISeq::readData(data = expression_counts,
                                factors = factors,           #variables indicating the experimental group for each sample
                                gc = mygc,                   #%GC in myannot
                                biotype = mybiotype,         #biotype
@@ -249,7 +241,7 @@ dev.off()
 mylengthbias <- dat(noiseqData, 
                     k = 0,
                     type = "lengthbias",
-                    factor = "cogdx")
+                    factor = NULL)
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
 
@@ -266,14 +258,14 @@ dev.off()
 myPCA <- dat(noiseqData,
              type = "PCA", 
              norm = T,
-             logtransf = F)
+             logtransf = T)
 
 #Plot PCA
 
 png("PCA_Ori.png")
-explo.plot(myPCA, samples = c(1,2),
+explo.plot(myPCA,
            plottype = "scores",
-           factor = "cogdx")
+           factor = NULL)
 dev.off()
 
 #Save PCA file
@@ -331,13 +323,13 @@ lFull <- withinLaneNormalization(gcFull,
                                  "length", 
                                  which = "full")#corrects length bias 
 
-#cd Diagnostic test has to preceed ARSyN or it won't work
+#cd Diagnostic test for lenght and gc correction
 
 mycd_lessbias <- NOISeq::dat(lFull,
                          type = "cd",
                          norm = TRUE)
 
-#[1] "Reference sample is: 594_120522"
+#Table diagnostic
 
 table(mycd_lessbias@dat$DiagnosticTest[,  "Diagnostic Test"])
 
