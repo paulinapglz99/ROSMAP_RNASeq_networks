@@ -1,5 +1,7 @@
-#Script that Matchs FPKM files and and ClinicalMetadata to prepare counts for the RNA-Seq QC 
-#paulinapglz.99@gmail.com
+#
+#Script 1.MatchCountsandClinicalMetadata.R
+#This code  Matchs FPKM files and and ClinicalMetadata to prepare counts for the RNA-Seq QC 
+#By paulinapglz.99@gmail.com
 
 #Libraries  ----- 
 

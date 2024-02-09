@@ -1,6 +1,7 @@
+#
+#Script 1.1prepro-mRNA.R
 #Script for annotation, bias detection and correction (QC) 
 #of already normalized gene expression data
-
 #By paulinapglz.99@gmail.com
 
 ####################### PACKAGES ############################## 
@@ -18,12 +19,12 @@ pacman::p_load('dplyr',
 #Read counts data
 #This file was generated in 1.MatchFPKMandClinicalMetadata.R
 
-expression <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv') %>%   #counts for all cogdx but 6
+counts <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv') %>%   #counts for all cogdx but 6
   as.data.frame()
-dim(expression)
+dim(counts)
 #[1] 55889   625  #original expression counts have 55889 genes and 625 specimenIDs
 
-colnames(expression)[1] <-"ensembl_gene_id" #change the name for further filtering
+colnames(counts)[1] <-"ensembl_gene_id" #change the name for further filtering
 
 ############################## B. Annotation ##############################
 
@@ -52,30 +53,30 @@ dim(myannot)
 
 #left join to further filtering
 
-expression <- myannot %>% left_join(expression, 
+counts <- myannot %>% left_join(counts, 
                                     by = "ensembl_gene_id")
-dim(expression)
+dim(counts)
 #[1] 49399   631
 
 #Filter to obtain only protein coding 
 
-expression <- expression %>% 
+counts <- counts %>% 
   filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
   distinct(ensembl_gene_id, .keep_all = TRUE) # Keeps only unique rows based on the ensembl_gene_id column
-dim(expression)
+dim(counts)
 #[1] 18848   631
 
 #Obtain new annotation after filtering
 
-myannot <- expression %>% 
+myannot <- counts %>% 
   dplyr::select(1:7)
 dim(myannot)
 #[1] 18848     7
 
 #Obtain counts 
 
-expression_counts <- expression %>% 
-  dplyr::select(ensembl_gene_id, 8:ncol(expression))      
+expression_counts <- counts %>% 
+  dplyr::select(ensembl_gene_id, 8:ncol(counts))      
 dim(expression_counts)
 #[1] 18848   625
 
@@ -97,8 +98,7 @@ apply(scaled_expression_counts, 2, sd)
 
 #Obtain factors from metadata
 
-metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_250124.csv") %>% 
-  dplyr::select(specimenID, msex, cogdx, ceradsc, braaksc)
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_080224.csv")
 dim(metadata)
 #[1] 624   5
 

@@ -1,7 +1,7 @@
 #
 #Script 0.Handle_metadata.R
 #This pre-pre-process script reads ROSMAP metadata and FPKM counts data and handle both for further analysis
-#paulinapglz.99@gmail.com
+#By paulinapglz.99@gmail.com
 
 #libraries  ----- 
 
