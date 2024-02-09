@@ -1,0 +1,512 @@
+ggplot() +
+aes(x = PC1, y = PC2, color= as.factor(ceradsc)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+mat <- as.matrix(counts[,-1])
+rownames(mat) <- counts$gene_id
+pca <- prcomp(t(mat)) #we t() to have samples in rows
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, color = as.factor(msex)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/cli_bio_metadata.csv")
+#Manage data --- ---
+mat <- as.matrix(counts[,-1])
+rownames(mat) <- counts$gene_id
+pca <- prcomp(t(mat)) #we t() to have samples in rows
+pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column(var = 'specimenID')
+pca_df <- pca_df %>%
+as_tibble() %>%
+left_join(metadata)
+pca_df %>%
+filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, color = as.factor(msex)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+barplot(pca$rotation[,1])
+View(pca)
+plot(pca, type = "l", main = "Scree Plot - PCA", xlab = "Principal Component", ylab = "Standard Deviation")
+plot(pca, type = "l", main = "Scree Plot - PCA")
+plot(pca, type = "h", main = "Scree Plot - PCA")
+plot(pca, type = "barplot", main = "Scree Plot - PCA")
+plot(pca, type = "barplot", main = "Scree Plot - PCA",  xlab = "Principal Component")
+pca$rotation[,1]
+barplot(pca$rotation[,1])
+# Crear un data frame con los valores y etiquetas
+df <- data.frame(PC = seq_along(pca$rotation[, 1]), Value = pca$rotation[, 1])
+# Crear el gráfico de barras con ggplot2
+ggplot(df, aes(x = PC, y = Value)) +
+geom_bar(stat = "identity", fill = "darkblue", alpha = 0.7) +
+labs(title = "PC1 Loadings", x = "Principal Component", y = "Loading Value") +
+theme_minimal()
+counts_centered <- scale(counts[-1], scale = T, center = T)
+pacman::p_load(tidyverse)
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/cli_bio_metadata.csv")
+counts_centered <- scale(counts[-1], scale = T, center = T)
+rm(counts_centered)
+counts_scaled_centered <- scale(counts[-1], scale = T, center = T)
+apply(counts_scaled_centered, 2, sd)
+mat <- as.matrix(counts_scaled_centered)
+rownames(mat) <- counts$gene_id  #Add rownames
+pca <- prcomp(t(mat)) #we t() to have samples in rows
+class(pca)
+counts <- scale(counts[-1], center = T)
+View(counts)
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+gene_names <- counts[1]
+View(counts)
+View(gene_names)
+counts <- scale(counts[-1], center = T) #omited first column as it
+counts <- scale(counts[-1], center = T, scaling = F) #omited first column as it
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+gene_names <- counts[1]
+counts <- scale(counts[-1], center = T, scaling = F) #omited first column as it
+counts <- scale(counts[-1], center = T, scale = F) #omited first column as it
+head(counts)
+rownames(counts) <- gene_names
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+gene_names <- counts[1]
+counts <- scale(counts[-1], center = T, scale = F) #omited first column as it
+View(counts)
+dim(counts)
+dim(gene_names)
+class(counts)
+counts <- scale(counts[-1], center = T, scale = F) %>%   #omited first column as it
+as.data.frame()
+#[1] 55889   624 genes, samples
+rownames(counts) <- gene_names  #restore gene names as rownames
+#[1] 55889   624 genes, samples
+rownames(counts) <- gene_names$gene_id  #restore gene names as rownames
+gene_names$gene_id
+rownames(counts)
+dim(gene_names)
+rownames(counts) <- gene_names$gene_id  #restore gene names as rownames
+gene_names
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+gene_names <- counts[1] %>% as.vector()
+View(mat)
+counts <- scale(counts[-1], center = T, scale = F) %>%   #omited first column as it contains only names
+as.data.frame()
+rownames(counts) <- gene_names  #restore gene names as rownames
+dim(counts)
+rownames(counts) <- NULL  #restore gene names as rownames
+rownames(counts) <- gene_names  #restore gene names as rownames
+length(gene_names)
+gene_names <- counts[1] %>% as.vector()
+gc()
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/cli_bio_metadata.csv")
+gene_names <- counts[1] %>% as.vector()
+pacman::p_load(tidyverse)
+gene_names <- counts[1] %>% as.vector()
+gene_names <- counts[1] %>% as.vector.data.frame()
+class(gene_names)
+gene_names <- counts$gene_id
+dim(gene_names)
+counts <- scale(counts[-1], center = T, scale = F) %>%   #omited first column as it contains only names
+as.data.frame()
+dim(counts)
+rownames(counts) <- gene_names  #restore gene names as rownames
+rownames(counts)
+apply(count, 2, sd)
+apply(counts, 2, sd)
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+counts <- scale(counts[-1], scale = T, center = T) %>%   #omited first column as it contains only names
+as.data.frame()
+rownames(counts) <- gene_names  #restore gene names as rownames
+apply(counts, 2, sd)
+gc()
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/cli_bio_metadata.csv")
+counts <- scale(counts[-1], scale = T, center = T) #omited first column as it contains only names
+dim(counts)
+apply(counts, 2, sd)
+mat <- as.matrix(counts_scaled_centered)
+mat <- as.matrix(counts)
+rownames(mat) <- gene_names  #Add rownames
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+gene_names <- counts$gene_id
+counts <- scale(counts[-1], scale = T, center = T) #omited first column as it contains only names
+dim(counts)
+apply(counts, 2, sd)
+mat <- as.matrix(counts)
+rownames(mat) <- gene_names  #Add rownames
+rownames(mat)
+pca <- prcomp(t(mat)) #we t() to have samples in rows
+str(pca)
+pca$rotation
+str(pca)
+dim(pca$x)
+View(pca$x)
+dim(mat)
+pca <- prcomp(t(mat), n = k) #we t() to have samples in rows
+dim(pca$x)
+pca <- prcomp(t(mat)) #we t() to have samples in rows
+View(pca$sdev)
+length(pca$sdev)
+pca$center
+plot(pca, main = 'Scree plot')
+plot(pca, main = 'Scree plot', xlab = 'Principal Component', ylab = 'Variance Explained')
+plot(pca, main = 'Scree plot', xlab = 'Principal Component')
+plot(pca, main = 'Scree plot', xlab = 'Principal Component'.)
+plot(pca, main = 'Scree plot', xlab = 'Principal Component',
+col = 'blue', lty = 1, pch = 16)
+plot(pca, main = 'Scree plot', xlab = 'Principal Component',
+col = '465', lty = 1, pch = 16)
+plot(pca, main = 'Scree plot', xlab = 'Principal Component',
+col = '#B48EAE', lty = 1, pch = 16)
+plot(pca, main = 'Scree plot', xlab = 'Principal Component',
+col = '#B48EAE',bg = 'lightgray')
+plot(pca, main = 'Scree plot', xlab = 'Principal Components from 1 to 10',
+col = '#B48EAE',bg = 'lightgray')
+table(pca)
+barplot(pca$rotation[,1], col = '#B48EAE')
+table(pca$sdev)
+scree_table <- table(pca$sdev)
+scree_table <- pca$sdev %>% as.data.frame()
+View(scree_table)
+scree_table <- scree_table %>%
+mutate(cumulative = cum(.))
+head
+head(scree_table)
+sum(scree_table$.)
+# Calculate the cumulative percentage of variance
+cumulative_percentage <- cumsum(pca$sdev^2 / sum(pca$sdev^2) * 100)
+# Create a data frame with PC number and percentage of variance
+variance_table <- data.frame(
+PC = 1:length(pca$sdev),
+Variance_Percentage = pca$sdev^2 / sum(pca$sdev^2) * 100,
+Cumulative_Percentage = cumulative_percentage
+)
+View(variance_table)
+# Create a data frame with PC number and percentage of variance
+variance_table <- data.frame(
+PC = 1:length(pca$sdev),
+Variance_Percentage = pca$sdev^2 / sum(pca$sdev^2) * 100,
+cumulative_Percentage = cumulative_percentage
+)
+variance_table_95 <- variance_table %>%
+filter(cumulative_percentage < 95)
+View(variance_table_95)
+variance_table_95 <- variance_table %>%
+filter(cumulative_percentage =< 95)
+variance_table_95 <- variance_table %>%
+filter(cumulative_percentage <= 95)
+print(variance_table_95)
+variance_table_95$Variance_Percentage
+setwd("~/redesROSMAP/ROSMAP_RNASeq_networks")
+vroom::vroom_write(variance_table_95, file = "variance95.tsv")
+variance_table_95 <- variance_table %>%
+filter(cumulative_percentage <= 96)
+View(variance_table_95)
+variance_table_95 <- variance_table %>%
+filter(cumulative_percentage <= 95)
+pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column(var = 'specimenID')
+View(pca_df)
+pca_df <- pca_df %>%
+as_tibble() %>%
+left_join(metadata)
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, color = as.factor(msex)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, color = as.factor(msex)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, color = as.factor(msex)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+dev.off()
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, color = as.factor(msex)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, color = "#7B4B94") +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+aes(x = PC1, y = PC2 +
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, color = "black") +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, colour = "black") +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, colour = "black") +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, colour = specimenID) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, colour = as.factor(cogdx)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC2, y = PC3, colour = as.factor(cogdx)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC2, y = PC3) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC3) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1])
+View(loading_data)
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1])
+View(loading_data_PC1)
+loading_data_PC1 <- loading_data_PC1 %>%
+arrange(desc(PC1_Loadings))
+pacman::p_load(tidyverse)
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/cli_bio_metadata.csv")
+gene_names <- counts$gene_id
+counts <- scale(counts[-1], scale = T, center = T) #omited first column as it contains only names
+apply(counts, 2, sd)
+mat <- as.matrix(counts)
+rownames(mat) <- gene_names  #Add rownames
+dim(mat)
+pca <- prcomp(t(mat)) #we t() to have samples in rows
+pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column(var = 'specimenID')
+pca_df <- pca_df %>%
+as_tibble() %>%
+left_join(metadata)
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, colour = as.factor(cogdx)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID)) +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC1 vs PC2", x = "PC1 (17.08%)", y = "PC2 (12.08%)")
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID)) +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC1 vs PC2", x = "PC1 (17.08%)", y = "PC2 (12.08%)")
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID), colour =as.factor(cogdx)) +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC1 vs PC2", x = "PC1 (17.08%)", y = "PC2 (12.08%)")
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, colour = as.factor(cogdx)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID)) +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC1 vs PC2", x = "PC1 (17.08%)", y = "PC2 (12.08%)")
+pca_df %>%
+ggplot() +
+aes(x = PC1, y = PC3) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID)) +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC1 vs PC3", x = "PC1 (17.08%)", y = "PC3 (9.8%)")
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC2, y = PC3) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))  +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC2 vs PC3", x = "PC1 (12.08%)", y = "PC3 (9.8%)")
+loading_data_PC1 <- loading_data_PC1 %>%
+arrange(desc(PC1_Loadings))
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1])
+loading_data_PC1 <- loading_data_PC1 %>%
+arrange(desc(PC1_Loadings))
+View(loading_data_PC1)
+sum(loading_data_PC1$PC1_Loadings)
+View(metadata)
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1],
+umulative_Percentage = cumsum(pca$rotation^2 / sum(pca$rotation^2) * 100))
+View(loading_data_PC1)
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1],
+cumulative_Percentage = cumsum(pca$rotation^2 / sum(pca$rotation^2) * 100)) %>%
+arrange(desc(cumulative_Percentage))
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1])
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1],
+loadings_Percentage = PC1_Loadings^2 / sum(PC1_Loadings^2) * 100)
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1]) %>%
+mutate(loadings_Percentage = PC1_Loadings^2 / sum(PC1_Loadings^2) * 100))
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1]) %>%
+mutate(loadings_Percentage = PC1_Loadings^2 / sum(PC1_Loadings^2) * 100)
+# Crear un dataframe con los nombres de las variables y los valores de carga para PC1
+loading_data_PC1 <- data.frame(Variable = names(pca$rotation[, 1]),
+PC1_Loadings = pca$rotation[, 1]) %>%
+mutate(loadings_Percentage = PC1_Loadings^2 / sum(PC1_Loadings^2) * 100,
+cumulative_percentages = cumsum(PC1_Loadings^2 / sum(PC1_Loadings^2) * 100))
+View(counts)
+pacman::p_load(corrplot,
+dplyr)
+metadata <- vroom::vroom(file = '/datos/rosmap/metadata/cli_bio_metadata.csv')
+metadata <- metadata %>%
+filter(assay == 'rnaSeq',
+organ == 'brain') %>%
+dplyr::select("individualID", "specimenID","msex", "educ",
+"race", "spanish", "apoe_genotype",
+"braaksc", "ceradsc",
+"cogdx", "dcfdx_lv")
+cor_metadata <- metadata[3:11]
+cor_metadata <- cor_metadata%>%
+filter(!is.na(cogdx) & !is.na(apoe_genotype))
+C<- cor(cor_metadata)
+corrplot(C, method = 'number')
+corrplot(C, method = 'square', order = 'FPC', type = 'lower', diag = FALSE)
+pacman::p_load(tidyverse)
+counts <- vroom::vroom(file = "/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv")
+metadata <- vroom::vroom(file = "/datos/rosmap/metadata/cli_bio_metadata.csv")
+gene_names <- counts$gene_id
+counts <- scale(counts[-1], scale = T, center = T) #omited first column as it contains only names
+dim(counts)
+apply(counts, 2, sd)
+mat <- as.matrix(counts)
+rownames(mat) <- gene_names  #Add rownames
+dim(mat)
+pca <- prcomp(t(mat)) #we t() to have samples in rows
+plot(pca, main = 'Scree plot', xlab = 'Principal Components from 1 to 10',
+col = '#B48EAE',bg = 'lightgray')
+# Calculate the cumulative percentage of variance
+cumulative_percentage <- cumsum(pca$sdev^2 / sum(pca$sdev^2) * 100)
+# Create a data frame with PC number and percentage of variance
+variance_table <- data.frame(
+PC = 1:length(pca$sdev),
+Variance_Percentage = pca$sdev^2 / sum(pca$sdev^2) * 100,
+cumulative_Percentage = cumulative_percentage)
+variance_table_95 <- variance_table %>%
+filter(cumulative_percentage <= 95)
+pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column(var = 'specimenID')
+pca_df <- pca_df %>%
+as_tibble() %>%
+left_join(metadata)
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC1, y = PC2, colour = as.factor(cogdx)) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID)) +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC1 vs PC2", x = "PC1 (17.08%)", y = "PC2 (12.08%)")
+pca_df %>%
+ggplot() +
+aes(x = PC1, y = PC3) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID)) +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC1 vs PC3", x = "PC1 (17.08%)", y = "PC3 (9.8%)")
+pca_df %>%
+#filter(PC2>-0.5 & PC1 < 1000000) %>%  #trampeando
+ggplot() +
+aes(x = PC2, y = PC3) +
+geom_point() +
+geom_text(mapping = aes(label = specimenID))  +
+labs(title = "Gráfico de Dispersión PCA",
+subtitle = "de PC2 vs PC3", x = "PC1 (12.08%)", y = "PC3 (9.8%)")
+barplot(pca$rotation[,1], col = '#B48EAE')
+View(variance_table_95)
+?scale
+setwd("/datos/home/paulinapg/redesROSMAP/ROSMAP_RNASeq_networks")
+savehistory()

@@ -23,7 +23,7 @@ metadata <- metadata %>%
 cor_metadata <- metadata[3:11]
 
 cor_metadata <- cor_metadata%>%
-  filter(!is.na(cogdx) & !is.na(apoe_genotype))
+  filter(!is.na(cogdx) & !is.na(apoe_genotype))  #Here your variables with NAs
 
 #Correlation table
 
