@@ -40,7 +40,7 @@ myannot <- getBM(attributes = c("ensembl_gene_id",
                                 "percentage_gene_gc_content", "gene_biotype",
                                 "start_position","end_position","hgnc_symbol"),
                  filters = "ensembl_gene_id", 
-                 values =  expression$ensembl_gene_id,  #annotate the genes in the count matrix 
+                 values =  counts$ensembl_gene_id,  #annotate the genes in the count matrix 
                  mart = mart)
 
 #Add length column
@@ -96,27 +96,28 @@ scaled_expression_counts <- scale(expression_counts[-1], scale = T, center = T) 
 
 apply(scaled_expression_counts, 2, sd)
 
-#Obtain factors from metadata
+#Obtain factors from metadata --- --- 
 
 metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_080224.csv")
 dim(metadata)
-#[1] 624   5
+#[1] 624   12
 
 #I do this to make sure the rowlength of factors match with the counts columns
 
 factors <- data.frame(
-  "specimenID" = colnames(expression_counts))   
+  "specimenID" = colnames(expression_counts)[-1])   
 
 factors <- factors %>% 
   left_join(metadata, by = "specimenID")
 dim(factors)
-#[1] 624   5 # this means 624 specimen_IDs 
+#[1] 624   12 # this means 624 specimen_IDs 
 
 ############################## C. NOISeq object ##############################
 
 #Give format to table for NOIseq purposes ------ ------
 
-rownames(expression_counts) <- gene_names
+rownames(expression_counts) <- gene_names    #for the counts
+rownames(scaled_expression_counts) <- gene_names #for the NOISeq object to PCA
 
 #Names of features characteristics
 
@@ -126,15 +127,45 @@ mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
 
 mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
-#Create NOISeq object --- ---
 
 #NOTE: I create here two NOISeq objects, one is only for building a PCA, the other one
-#will be used for
+#will be used for bias detection and solving, as dat() does not accept centered and scaled data
+
+#Create NOISeq object FOR PCA --- ---
+
+noiseqData_PCA <- NOISeq::readData(data = scaled_expression_counts,
+                               factors = factors,           #variables indicating the experimental group for each sample
+                               gc = mygc,                   #%GC in myannot
+                               biotype = mybiotype,         #biotype
+                               length =  mylength)          #gene length
+
+#check for batch effect
+
+myPCA <- dat(noiseqData_PCA, 
+             type = "PCA",   #PCA type of plot
+             norm = T,       #indicating data are already normalized
+             logtransf = T)  #if T, it doesn't perform logtrasnf
+
+#Plot PCA
+#In this PCA, each point is a specimenID, and PCs are explained by gene variance
+
+png("PCA_Ori.png")
+explo.plot(myPCA,
+           plottype = "scores",
+           factor = NULL)   #use all factors
+dev.off()
+
+#Save PCA file
+
+#saveRDS(myPCA, "/datos/rosmap/PCAs/PCA_ori_RNAseq_ROSMAP_proteincoding090224.rsd")
+
+#Create NOISeq object bias detect and bias correction --- ---
+
 #For NOISeq, order of factors$specimenIDs and  colnames(expression_counts)[-1] must match
 #> identical(colnames(expression_counts)[-1], factors$specimenID)
 #[1] TRUE
 
-noiseqData <- NOISeq::readData(data = expression_counts,
+noiseqData <- NOISeq::readData(data = expression_counts[-1],
                                factors = factors,           #variables indicating the experimental group for each sample
                                gc = mygc,                   #%GC in myannot
                                biotype = mybiotype,         #biotype
@@ -159,54 +190,30 @@ mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
 
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 
-#When using real data
-
 #FAILED PASSED 
 # 6    617 
 #Good but not perfect
 
-#1)check expression bias per subtype
-
-#Obtain the likely counts of genes, organized by subtype,
-#from the noiseqData object
-
+#1)check expression bias for counts
 #Use a same factor variable to all bias detection
 
 mycountsbio <- dat(noiseqData, 
                    type =  "countsbio",  
                    norm = T,      #T when already normalized counts as input
-                   factor = NULL) #When NULL, all factors
+                   factor = NULL) #When NULL, all factors are considered
 #Plots
 
 png("CountsOri.png")
-explo.plot(mycountsbio, plottype = "boxplot", samples = 1:10)
+explo.plot(mycountsbio,
+           plottype = "boxplot", #type of plot
+           samples = 1:15)  #only showing the first 15 samples
 dev.off()
 
 #2)check for low count genes
 
 png("lowcountsOri.png")
-explo.plot(mycountsbio, plottype = "barplot", samples = 1:10)
+explo.plot(mycountsbio, plottype = "barplot", samples = 1:15)
 dev.off()
-
-#Histogram of row means
-
-#Warning, this histogram does not run properly
-png("lowCountThres.png")
-hist(rowMeans(cpm(as.matrix(expression_counts,log=T))), #renormalizes for CPM values
-     ylab="genes",
-     xlab="mean of log CPM",  
-     col="gray")
-abline(v=0,col="red")
-dev.off()
-
-#Trying w/ggplot
-
-ggplot(data = data.frame(logCPM = rowMeans(cpm(as.matrix(expression_counts), log = TRUE))),
-       aes(x = logCPM)) +
-  geom_histogram(binwidth = 0.1, fill = "gray", color = "white") +
-  labs(x = "Mean of log CPM", y = "Genes") +
-  theme_minimal() +
-  geom_vline(xintercept = 0, color = "red")
 
 #3)check for transcript composition bias
 
@@ -231,7 +238,7 @@ myGCcontent <- dat(noiseqData,
 
 png("GCbiasOri.png",width=1000)
 explo.plot(myGCcontent,
-           samples = NULL,
+           samples = NULL,   
            toplot = "global")
 dev.off()
 
@@ -249,28 +256,9 @@ mylengthbias <- dat(noiseqData,
 
 png("lengthbiasOri.png", width=1000)
 explo.plot(mylengthbias, 
-           samples = NULL, 
+           samples = 1:12, 
            toplot = "global")
 dev.off()
-
-#5) check for batch effect
-
-myPCA <- dat(noiseqData,
-             type = "PCA", 
-             norm = T,
-             logtransf = T)
-
-#Plot PCA
-
-png("PCA_Ori.png")
-explo.plot(myPCA,
-           plottype = "scores",
-           factor = NULL)
-dev.off()
-
-#Save PCA file
-
-#saveRDS(myPCA, "/datos/rosmap/PCAs/PCA_ori_preArsyn.rsd")
 
 #################SOLVE BIASES###################################
 
@@ -283,8 +271,8 @@ dev.off()
 #CPM>1
 
 countMatrixFiltered <- filtered.data(expression_counts[-1], 
-                                     factor = "cogdx",
-                                     norm = T, 
+                                     factor = "batch",       #using all factors
+                                     norm = T,           #already normalized counts
                                      depth = NULL,
                                      method = 1, 
                                      cpm = 0, 
@@ -323,21 +311,22 @@ lFull <- withinLaneNormalization(gcFull,
                                  "length", 
                                  which = "full")#corrects length bias 
 
-#cd Diagnostic test for lenght and gc correction
+#cd Diagnostic test for length and gc correction
 
 mycd_lessbias <- NOISeq::dat(lFull,
                          type = "cd",
                          norm = TRUE)
+#[1] "Reference sample is: 594_120522"
 
 #Table diagnostic
 
 table(mycd_lessbias@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
-#455    168 
+#  448    175  
 
 #############################SOLVE BATCH EFFECT#######################################################
-
+#If your data is already batch solved, only renormalize if last table diagnostic tells you to do it
 # Normalization --- ---
 
 #Use Uqua (UpperQuartile) for renormalization
@@ -366,6 +355,7 @@ table(mycd_Uqua@dat$DiagnosticTest[,  "Diagnostic Test"])
 #26    597
 
 #ARSyNseq for batch effect solution --- ---
+#Only do this if your data is not batch solved
 
 #When batch is identified with one of the factors described in the argument factor
 #of the data object, ARSyNseq estimates this effect and removes it by estimating the
@@ -374,8 +364,8 @@ table(mycd_Uqua@dat$DiagnosticTest[,  "Diagnostic Test"])
 #specified in Variability. 
 
 norm_ARSyn <- ARSyNseq(noiseqData_Uqua,              #Biobases eSet object
-                       factor = "cogdx",   #when NULL, all factors are considered
-                       batch = FALSE,      #TRUE if factor argument is batch info
+                       factor = "batch",   #when NULL, all factors are considered
+                       batch = T,      #TRUE if factor argument is batch info
                        norm = "n",            #type of normalization, "n" if already normalized
                        logtransf = F)      #If F, log-transformation will be applied before ARSyn
 
@@ -410,7 +400,7 @@ mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
 #Create new noiseq object with re-normalized counts 
 
-noiseqData_final <- NOISeq::readData(exprs(norm_ARSyn),
+noiseqData_final <- NOISeq::readData(exprs(noiseqData_Uqua),
                              gc = mygc,
                              biotype = mybiotype,
                              factors = factors,
@@ -428,14 +418,13 @@ mycountsbio_final <- dat(noiseqData_final,
 png("CountsFinal.png")
 explo.plot(mycountsbio_final,
            plottype = "boxplot",
-           samples = 1:10)
+           samples = 1:15)
 dev.off()
-
 
 #Low counts 
 
 png("lowcountsFinal.png")
-explo.plot(mycountsbio, plottype = "barplot", samples = 1:10)
+explo.plot(mycountsbio, plottype = "barplot", samples = 1:15)
 dev.off()
 
 #calculate final GC bias
@@ -474,5 +463,5 @@ dim(final_counts)
 #[1] 14951   624  #This means 624 specimenIDs with 14951 features
 
 #Finally, save table
-vroom::vroom_write(final_counts, file = "/datos/rosmap/FPKM_data/QCed_count_matrixfiltered_ROSMAP_290124.tsv")
+vroom::vroom_write(final_counts, file = "/datos/rosmap/FPKM_data/ROSMAP_QCed_count_matrixfiltered_090224.tsv")
 #END --- ---
