@@ -112,18 +112,17 @@ dim(noAD_pathology_counts)
 
 #this generates a discretized expression matrix
 
-mat_dis <- infotheo::discretize(t(AD_pathology_counts[-1])) #This t() makes genes to be columns in discretized data
+mat_dis <- infotheo::discretize(NIA_reagan_counts[-1])
 dim(mat_dis)
 #[1]   254 19064  
 
-#Regenerate genes as colnames
+#Regenerate gene names
 
-colnames(mat_dis) <- AD_pathology_counts$ensembl_gene_id
 mat_dis <- mat_dis %>% 
-    mutate(specimenID = colnames(AD_pathology_counts)[-1], .before = 1)
+    mutate(ensembl_gene_id = NIA_reagan_counts$ensembl_gene_id, .before = 1)
 
 #Save discretized matrix --- --- 
 
-#vroom::vroom_write(mat_dis, file = "/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv")
+vroom::vroom_write(mat_dis, file = "/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv")
 
 ###Next script is 3.mutualinformation_matrix.R

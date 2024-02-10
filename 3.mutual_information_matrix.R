@@ -1,40 +1,42 @@
+#
+#3.mutual_information_matrix.R
 #Script que hace mutual information para datos de expresion RNAseq de ROSMAP
 #paulinapglz.99@gmail.com
 
 pacman::p_load('future', 
              'tidyverse', 
-             'infotheo',
              'furrr')
-
-#set timer ---- 
-
-tempus <- Sys.time()
-
 #read data ----------
 
-protcod <- vroom(file = '/datos/rosmap/discretized_matrix/protcod_AD.txt')  #change for every desired diagnosis 
-
-mat_dis <- vroom(file = '/datos/rosmap/discretized_matrix/mat_dis_AD.txt')
+mat_dis <- vroom::vroom(file = '/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv')
 
 # indexing data --------------
 
-my_index <- pull(protcod, 'gene_id') #to rename matrix
+my_index <- pull(mat_dis, 1) #pull vector from 1st col of mat_dis
 
-#Quiero un vector que tenga los conteos de cada elemento de otro vector
+#Create vector with named indexes
 
-my_index_i <- seq_along(my_index) #indice numero de my_index
+my_index_i <- seq_along(my_index) #index number of my_index
 
-names(my_index_i) <- my_index  #etiquetar con indices, le doy nombre a los elementos del vector
+names(my_index_i) <- my_index  #giving names to index
 
 #set multicore plan --------
 
 plan(multicore, workers = 40)
 
+#set timer ---- 
+
+tempus <- Sys.time()
+
 #Calculate mutual information ------
 
-MI_MI <- future_map(.x = my_index_i, .f = function(k){
+MI_MI <- future_map(
+  .x = my_index_i, 
+  .f = function(k){
 kk = mat_dis[k]
- map(.x = my_index_i, .f = function(m){
+ map(
+   .x = my_index_i,
+     .f = function(m){
   mm = mat_dis[m]
    mutinformation(kk,mm)
  })
@@ -42,10 +44,7 @@ kk = mat_dis[k]
 
 #write matrix ----
 
-#write_rds(x = MI_MI,
-#         file = "ROSMAP_RNAseq_MutualInfo_allMCI_matrix.rds") #this one did not work
-
-saveRDS(MI_MI, "ROSMAP_RNAseq_MutualInfo_allMCI_matrix.rds")
+#saveRDS(MI_MI, "ROSMAP_RNAseq_MutualInfo_allNIA_Reagan_dicho.rds")
 
 #print time ----
 
