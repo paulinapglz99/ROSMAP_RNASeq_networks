@@ -5,10 +5,13 @@
 
 pacman::p_load('future', 
              'tidyverse', 
-             'furrr')
+             'furrr', 
+             'infotheo')
 #read data ----------
 
 mat_dis <- vroom::vroom(file = '/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv')
+dim(mat_dis)
+#[1] 14951   435
 
 # indexing data --------------
 
@@ -30,14 +33,19 @@ tempus <- Sys.time()
 
 #Calculate mutual information ------
 
+#Mutual information can't calculate for 1st column, gene names, so 
+mat_dis <- mat_dis[-1]
+
+#Parallel MI with future_map() and map()
+
 MI_MI <- future_map(
-  .x = my_index_i, 
-  .f = function(k){
-kk = mat_dis[k]
+  .x = my_index_i,      #named vector where we are going to apply a function .f
+  .f = function(k){     #create function that calculates MI between a vector k...
+kk = mat_dis[k]     
  map(
-   .x = my_index_i,
+   .x = my_index_i,     #same named vector
      .f = function(m){
-  mm = mat_dis[m]
+  mm = mat_dis[m]       #...and a vector m
    mutinformation(kk,mm)
  })
 })
