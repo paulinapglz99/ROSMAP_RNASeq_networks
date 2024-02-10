@@ -107,11 +107,13 @@ factors <- data.frame(
 factors <- factors %>% 
   left_join(metadata, by = "specimenID")
 dim(factors)
-#[1] 624   12 # this means 624 specimen_IDs 
+#[1] 624   14 # this means 624 specimen_IDs 
 
 ############################## C. NOISeq object ##############################
 
 #Give format to table for NOIseq purposes ------ ------
+
+gene_names <- myannot$ensembl_gene_id
 
 rownames(expression_counts) <- gene_names    #for the counts
 rownames(scaled_expression_counts) <- gene_names #for the NOISeq object to PCA
@@ -285,6 +287,11 @@ myannot <- myannot %>%
 dim(myannot)
 #[1] 14951     7
 
+###Save annotation for later --- ---
+
+vroom::vroom_write(myannot, file = "/datos/rosmap/metadata/ROSMAP_QC_fitlered_annotation100224.tsv")
+
+#Again regenerate names vector 
 gene_names <- myannot$ensembl_gene_id
 
 ##Create EDA object

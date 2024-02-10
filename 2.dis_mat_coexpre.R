@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #This script takes FPKM normalized data from RNAseq and calculates a coexpression matrix.
 #With this coexpression matrix, the mutual information matrix is performed later on next block
 #Previous script is 1.1.pre-promRNA.R
@@ -58,40 +57,43 @@ dim(no_AD_pathology)
 
 counts <- vroom::vroom(file = '/datos/rosmap/FPKM_data/ROSMAP_QCed_count_matrixfiltered_090224.tsv')
 dim(counts)
-#[1] 14951   624
+#[1] 14951   625
 
-# Finally we subset RNAseq FPKMS by cogdx ----------
+# Finally we subset RNAseq counts by cogdx ----------
 
 cogdxNCI_counts <- counts %>%
-  dplyr::select(gene_id, all_of(NCI_cogdx$specimenID))
-dim(FPKM_noMCI)
-#[1] 55889   201  #201 specimenIDs
+  dplyr::select(1, all_of(NCI_cogdx$specimenID))
+dim(cogdxNCI_counts)
+#[1] 14951   202
 
 cogdxMCI_counts <- counts %>%
-  dplyr::select(gene_id, all_of(MCI_cogdx$specimenID))
-dim(FPKM_MCI)
-# [1] 55889   169  #169 specimenIDs
+  dplyr::select(1, all_of(MCI_cogdx$specimenID))
+dim(cogdxMCI_counts)
+# [1] 14951   159
 
 cogdxAD_counts <- counts %>%
-  dplyr::select(gene_id, all_of(AD_cogdx$specimenID))
-dim(FPKM_AD)
-#[1] 55889   255  #255 spcimenIDs
+  dplyr::select(1, all_of(AD_cogdx$specimenID))
+dim(cogdxAD_counts)
+#[1] 14951   223
 
-FPKM_confirmedAD <- counts %>% 
-  dplyr::select(gene_id, all_of(confirmedAD$specimenID))
-dim(FPKM_confirmedAD)
-#[1] 55889   193  #193 specimenIDs
+# Subset RNAseq FPKMS by NIA_reagan dichotomous dx----------
 
-#Save tables
+AD_pathology_counts <- counts %>%
+  dplyr::select(1, all_of(AD_pathology$specimenID))
+dim(AD_pathology_counts)
+#[1] 14951   256
 
-#vroom_write(FPKM_AD, 
-#        file = 'FPKM_AD.csv', 
-#       delim = ',')
+noAD_pathology_counts <- counts %>%
+  dplyr::select(1, all_of(no_AD_pathology$specimenID))
+dim(noAD_pathology_counts)
+#[1] 14951   180
 
-FPKM <- FPKM_AD  #For non-hardcoding reasons, change this to FPKM_MCI, FPKM_noMCI, FPKM_confirmedAD, etc.
+#Save tables as needed --- --- 
 
-#Generate annotation with ensembl. Annotate gene_biotype, GC content
+#vroom_write(AD_pathology_counts, 
+#        file = 'AD_pathology_counts.tsv')
 
+#Read annotation and filter annotation by traits
 mart <- useEnsembl("ensembl",
                    dataset="hsapiens_gene_ensembl")
 
@@ -140,7 +142,6 @@ dim(mat_dis)
 #[1]   254 19064  #still 19064 genes yay
 
 ###Next script is 3.mutualinformation_matrix.R
-=======
 #This script takes FPKM normalized data from RNAseq and calculates a coexpression matrix.
 #With this coexpression matrix, the mutual information matrix is performed later on next block
 #Previous script is 1.1.pre-promRNA.R
