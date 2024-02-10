@@ -80,9 +80,6 @@ expression_counts <- counts %>%
 dim(expression_counts)
 #[1] 18848   625
 
-#Save gene names
-gene_names <- expression_counts$ensembl_gene_id
-
 #Scale and center data --- --- 
 
 #If your data is not already scaled, scale(scale = T) if you don't need it
@@ -100,7 +97,7 @@ apply(scaled_expression_counts, 2, sd)
 
 metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_080224.csv")
 dim(metadata)
-#[1] 624   12
+#[1] 624   14
 
 #I do this to make sure the rowlength of factors match with the counts columns
 
@@ -232,7 +229,7 @@ dev.off()
 myGCcontent <- dat(noiseqData,
                    k = 0,            #A feature is considered to be detected if the corresponding number of read counts is > k. 
                    type = "GCbias", 
-                   factor = "cogdx")
+                   factor = NULL)
 
 #[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
 
@@ -285,6 +282,10 @@ countMatrixFiltered <- filtered.data(expression_counts[-1],
 
 myannot <- myannot %>%
   filter(ensembl_gene_id %in% rownames(countMatrixFiltered))
+dim(myannot)
+#[1] 14951     7
+
+gene_names <- myannot$ensembl_gene_id
 
 ##Create EDA object
 
@@ -398,6 +399,7 @@ mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
 
 mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
+
 #Create new noiseq object with re-normalized counts 
 
 noiseqData_final <- NOISeq::readData(exprs(noiseqData_Uqua),
@@ -457,8 +459,8 @@ dev.off()
 
 #Save new count matriz --- ---
 
-final_counts <- exprs(noiseqData_final) %>% 
-  as.data.frame()
+final_counts <- exprs(noiseqData_final) %>% as.data.frame() %>% 
+  mutate(ensembl_gene_id = rownames(exprs(noiseqData_final)), .before = 1) #add it as column so I can save it like tsv
 dim(final_counts)
 #[1] 14951   624  #This means 624 specimenIDs with 14951 features
 
