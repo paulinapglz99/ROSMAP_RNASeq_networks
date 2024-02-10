@@ -4,99 +4,79 @@
 
 #Libraries
 
-pacman::p_load("tidyverse", 
-       "ggplot2", 
-       'vroom', 
-       'biomaRt')
-
+pacman::p_load("tidyverse")
 
 #Subset by cognitive diagnosis ------------------
 
-#we have two diagnosis indicators in our metadata: cogdx and ceradsc
-#cogdx is blind to post morten data
-#ceradsc is blind to clinical data (histopatology)
-
-#as the metadata dictionary says:
-
-#for cogdx 
-##1 NCI: No cognitive impairment (No impaired domains)
-##2 MCI: Mild cognitive impairment (One impaired domain) and NO other cause of CI
-##3 MCI: Mild cognitive impairment (One impaired domain) AND another cause of CI
-##4 AD: Alzheimer’s dementia and NO other cause of CI (NINCDS PROB AD) 
-##5 AD: Alzheimer’s dementia AND another cause of CI (NINCDS POSS AD)
-##6 Other dementia: Other primary cause of dementia
-
-#for ceradsc
-
-#value | coding | if using a binary variable, recommendation is
-#  1  | Definite | yes
-#  2  | Probable | yes
-#  3  | Possible | no
-#  4  |  No AD   | no
-
-#only if we have ceradsc = 1 or 2 AND cogdx = 4 we can say we have a fully confirmed AD diagnosis
-
+#we have various diagnosis indicators in our metadata: cogdx, ceradsc
 #First, we assign libraries for the respective cognitive diagnosis
 
 #In 1.MatchFPKMandClinicalMetadata i already deleted cogdx == 1 and 6
 
-RNA_seq_metadata <- vroom::vroom(file = '/datos/rosmap/metadata/ROSMAP_filtered_metadata_forRNAseq.csv')
+metadata <- vroom::vroom(file = '/datos/rosmap/metadata/RNA_seq_metadata_080224.csv')
 
-#library for no MCI (no dementia known at the moment of death)
+#Subset by diagnosis --- ---
 
-noMCIcogdx <- RNA_seq_metadata %>% 
+#Filter by clinical diagnosis (cogdx variable is blind to pathological post mortem diagnosis)
+#In many studies, we can use only antemortem dx variables
+
+#Library for no MCI (no dementia known at the moment of death)
+
+NCI_cogdx <- metadata %>% 
   filter(cogdx == 1)
-dim(noMCIcogdx)
-# [1] 200   5   #200 individualIDs with no dementia
+dim(NCI_cogdx)
+# [1] 201  14 
 
-# For all MCI (mild cognitive impairment)
+# For MCI (mild cognitive impairment) and NO other cause of CI
 
-allMCIcogdx <- RNA_seq_metadata %>% 
-  filter(cogdx == 2 | cogdx == 3)
-dim(allMCIcogdx)
-#[1] 168   5    #168 individuals with some type of MCI
+MCI_cogdx <- metadata %>% 
+  filter(cogdx == 2)
+dim(MCI_cogdx)
+#[1] 158   14
 
-# Library for all types of AD
+# Library for AD dementia an no other cause of CI
 
-allADcogdx <- RNA_seq_metadata %>% 
-  filter(cogdx == 4 | cogdx == 5)
-dim(allADcogdx)
-#[1] 254   5    #254 individuals with probable or possible AD
+AD_cogdx <- metadata %>% 
+  filter(cogdx == 4)
+dim(AD_cogdx)
+#[1] 222   14   #254 individuals with probable or possible AD
 
-#Alternatively, if we want only fully confirmed AD patients
-#we need to choose by ceradsc == 1 OR 2 && cogdx == 4
+#Filter by NIA-Reagan pathological diagnosis, using a dichotomized approach
 
-confirmedAD <- RNA_seq_metadata %>% 
-  filter(ceradsc %in% c(1, 2), cogdx == 4)
-dim(confirmedAD)
-#[1] 192   5    #192 invididuals with confirmed AD
+AD_pathology <- metadata %>% 
+  filter(dicho_NIA_reagan == 1)
+dim(AD_pathology)
+#[1] 255  14
 
-#Difference of 62 individualIDs between allcogdxAD and confirmedAD
+no_AD_pathology <-metadata %>% 
+  filter(dicho_NIA_reagan == 0)
+dim(no_AD_pathology)
+#[1] 179  14
 
-#Read count data, this is now QC 
+#Read counts data --- ---
 
-#############################WARNING THIS IS NOT THE FINAL FILE, I HAVENT DONE THE QC YET ##########
-fpkm_matrix <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_new161223.csv') ###
-#############################WARNING THIS IS NOT THE FINAL FILE, I HAVENT DONE THE QC YET ##########
+counts <- vroom::vroom(file = '/datos/rosmap/FPKM_data/ROSMAP_QCed_count_matrixfiltered_090224.tsv')
+dim(counts)
+#[1] 14951   624
 
 # Finally we subset RNAseq FPKMS by cogdx ----------
 
-FPKM_noMCI <- fpkm_matrix %>%
-  dplyr::select(gene_id, all_of(noMCIcogdx$specimenID))
+cogdxNCI_counts <- counts %>%
+  dplyr::select(gene_id, all_of(NCI_cogdx$specimenID))
 dim(FPKM_noMCI)
 #[1] 55889   201  #201 specimenIDs
 
-FPKM_MCI <- fpkm_matrix %>%
-  dplyr::select(gene_id, all_of(allMCIcogdx$specimenID))
+cogdxMCI_counts <- counts %>%
+  dplyr::select(gene_id, all_of(MCI_cogdx$specimenID))
 dim(FPKM_MCI)
 # [1] 55889   169  #169 specimenIDs
 
-FPKM_AD <- fpkm_matrix %>%
-  dplyr::select(gene_id, all_of(allADcogdx$specimenID))
+cogdxAD_counts <- counts %>%
+  dplyr::select(gene_id, all_of(AD_cogdx$specimenID))
 dim(FPKM_AD)
 #[1] 55889   255  #255 spcimenIDs
 
-FPKM_confirmedAD <- fpkm_matrix %>% 
+FPKM_confirmedAD <- counts %>% 
   dplyr::select(gene_id, all_of(confirmedAD$specimenID))
 dim(FPKM_confirmedAD)
 #[1] 55889   193  #193 specimenIDs
@@ -147,9 +127,9 @@ dim(valores_expre)
 
 gene_names <- pull(protcod, 'gene_id')
 
-vroom_write(protcod, 
-            file = '/datos/rosmap/discretized_matrix/protcod_AD.txt',  #this for MCI and noMCI also
-            delim = ',')
+#vroom_write(protcod, 
+#            file = '/datos/rosmap/discretized_matrix/protcod_AD.txt',  #this for MCI and noMCI also
+#            delim = ',')
 
 ####  Data discretization
 #this generates a discretized expression matrix

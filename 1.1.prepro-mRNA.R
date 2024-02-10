@@ -463,5 +463,5 @@ dim(final_counts)
 #[1] 14951   624  #This means 624 specimenIDs with 14951 features
 
 #Finally, save table
-vroom::vroom_write(final_counts, file = "/datos/rosmap/FPKM_data/ROSMAP_QCed_count_matrixfiltered_090224.tsv")
+#vroom::vroom_write(final_counts, file = "/datos/rosmap/FPKM_data/ROSMAP_QCed_count_matrixfiltered_090224.tsv")
 #END --- ---
