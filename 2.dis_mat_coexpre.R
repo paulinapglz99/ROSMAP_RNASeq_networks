@@ -120,7 +120,7 @@ dim(mat_dis)
 
 colnames(mat_dis) <- AD_pathology_counts$ensembl_gene_id
 mat_dis <- mat_dis %>% 
-    mutate(ensembl_gene_id = colnames(AD_pathology_counts)[-1], .before = 1)
+    mutate(specimenID = colnames(AD_pathology_counts)[-1], .before = 1)
 
 #Save discretized matrix --- --- 
 

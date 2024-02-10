@@ -4,8 +4,7 @@
 pacman::p_load('future', 
              'tidyverse', 
              'infotheo',
-             'furrr', 
-             'vroom')
+             'furrr')
 
 #set timer ---- 
 
