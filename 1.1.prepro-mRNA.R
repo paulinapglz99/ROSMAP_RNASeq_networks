@@ -2,6 +2,7 @@
 #Script 1.1prepro-mRNA.R
 #Script for annotation, bias detection and correction (QC) 
 #of already normalized gene expression data
+#Previous script is 1.MatchCountsandClinicalMetadata.R
 #By paulinapglz.99@gmail.com
 
 ####################### PACKAGES ############################## 
