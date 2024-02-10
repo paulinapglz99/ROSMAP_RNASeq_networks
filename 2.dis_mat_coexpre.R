@@ -19,6 +19,8 @@ pacman::p_load("tidyverse")
 #In 1.MatchFPKMandClinicalMetadata i already deleted cogdx == 1 and 6
 
 metadata <- vroom::vroom(file = '/datos/rosmap/metadata/RNA_seq_metadata_080224.csv')
+dim(metadata)
+#[1] 624  14
 
 #Subset by diagnosis --- ---
 
@@ -105,24 +107,26 @@ dim(noAD_pathology_counts)
 
 #Save tables as needed --- --- 
 
-#vroom_write(AD_pathology_counts, 
-#        file = 'AD_pathology_counts.tsv')
+vroom_write(NIA_reagan_counts, 
+      file = '/datos/rosmap/FPKM_data/ROSMAP_NIA_reagandicho_counts_notdis.tsv')
 
 ####  Data discretization --- ---
 
 #this generates a discretized expression matrix
 
-mat_dis <- infotheo::discretize(NIA_reagan_counts[-1])
+mat_dis <- infotheo::discretize(t(NIA_reagan_counts[-1])) # I t() because we want genes to be columns to calculate MI in next script
 dim(mat_dis)
-#[1]   254 19064  
+#[1]   434 14951
 
-#Regenerate gene names
+#Regenerate gene names in cols and specimenIDs in rows
+
+colnames(mat_dis) <- NIA_reagan_counts$ensembl_gene_id
 
 mat_dis <- mat_dis %>% 
-    mutate(ensembl_gene_id = NIA_reagan_counts$ensembl_gene_id, .before = 1)
+  mutate(specimenID = colnames(NIA_reagan_counts)[-1], .before = 1)
 
 #Save discretized matrix --- --- 
 
-vroom::vroom_write(mat_dis, file = "/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv")
+#vroom::vroom_write(mat_dis, file = "/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv")
 
 ###Next script is 3.mutualinformation_matrix.R

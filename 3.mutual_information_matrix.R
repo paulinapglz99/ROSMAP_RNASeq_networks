@@ -11,17 +11,24 @@ pacman::p_load('future',
 
 mat_dis <- vroom::vroom(file = '/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv')
 dim(mat_dis)
-#[1] 14951   435
+#[1]   434 14952 #genes as columns
 
 # indexing data --------------
 
-my_index <- pull(mat_dis, 1) #pull vector from 1st col of mat_dis
+my_index <- colnames(mat_dis)[-1] %>% as.character()
 
 #Create vector with named indexes
 
 my_index_i <- seq_along(my_index) #index number of my_index
 
 names(my_index_i) <- my_index  #giving names to index
+
+#Mutual information can't calculate for 1st column, because those are the gene names, so 
+mat_dis <- mat_dis[-1]
+dim(mat_dis)
+#[1]   434 14951
+
+#the dimensions of the number of variables in mat_dis and the vector size must be the same
 
 #set multicore plan --------
 
@@ -32,9 +39,6 @@ plan(multicore, workers = 40)
 tempus <- Sys.time()
 
 #Calculate mutual information ------
-
-#Mutual information can't calculate for 1st column, gene names, so 
-mat_dis <- mat_dis[-1]
 
 #Parallel MI with future_map() and map()
 
