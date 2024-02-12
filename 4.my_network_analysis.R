@@ -1,12 +1,16 @@
-#My networks analysis
+#
+#4.my_network_analysis.R
+#script that analyzes coexpression matrices (adjacency matrices) and converts them 
+#into graph format with igraph, for later visualization and analysis.
+#paulinapglz.99@gmail.com
 
-#Libraries  ------
+#Libraries  --- --- 
 
 pacman::p_load('tidyverse', 
                'igraph', 
                'ggplot2')
 
-#Read adjacency matrix ----
+#Read adjacency matrix --- ---
 
 matrix <- vroom::vroom(file = '/datos/rosmap/matriz_coexpre_noMCI_11052023_zero.txt') %>% 
    as.data.frame()
@@ -16,7 +20,7 @@ matrix <- vroom::vroom(file = '/datos/rosmap/matriz_coexpre_noMCI_11052023_zero.
 matrix_MI <- matrix %>% 
   pivot_longer(cols = -gene,
                names_to = 'gene_to',
-               values_to = 'mi')
+               values_to = 'mi')      #slow, paralelize
 
 ########--- 
 

@@ -1,6 +1,6 @@
 #
 #3.mutual_information_matrix.R
-#Script que hace mutual information para datos de expresion RNAseq de ROSMAP
+#Script that calculates mutual information in a discretized matrix from RNA-seq expression data
 #paulinapglz.99@gmail.com
 
 pacman::p_load('future', 
@@ -9,9 +9,7 @@ pacman::p_load('future',
              'infotheo')
 #read data ----------
 
-mat_dis <- vroom::vroom(file = '/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv')
-dim(mat_dis)
-#[1]   434 14952 #genes as columns
+mat_dis <- vroom::vroom(file = '/datos/rosmap/discretized_matrix/ROSMAP_noAD_NIAReagan_discretizedmatrix_10022024.tsv')
 
 # indexing data --------------
 
@@ -60,6 +58,6 @@ print(Sys.time() - tempus)
 
 #write matrix ----
 
-#saveRDS(MI_MI, "ROSMAP_RNAseq_MutualInfo_allNIA_Reagan_dicho.rds")
+saveRDS(MI_MI, "ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho.rds")
 
 #Next script is the 4.rds_to_matrix.R and 5.zero_diag.R

@@ -1,6 +1,6 @@
 #
 #Script 2.dis_mat_coexpre.R
-#This script takes RNA counts (already QCed and normalized) and calculates a coexpression matrix.
+#This script takes RNA counts (already QCed and normalized with 1.1.prepro-mRNA) and calculates a coexpression matrix.
 #With this coexpression matrix, the mutual information matrix is performed later on next block
 #Previous script is 1.1.pre-promRNA.R
 
@@ -11,18 +11,32 @@
 
 pacman::p_load("tidyverse")
 
-#Subset counts by cognitive diagnosis --- ---
-
-#we have various diagnosis indicators in our metadata: cogdx, ceradsc
-#First, we assign libraries for the respective cognitive diagnosis
-
-#In 1.MatchFPKMandClinicalMetadata i already deleted cogdx == 1 and 6
+#Read metadata -- ---
 
 metadata <- vroom::vroom(file = '/datos/rosmap/metadata/RNA_seq_metadata_080224.csv')
 dim(metadata)
 #[1] 624  14
 
 #Subset by diagnosis --- ---
+
+#Filter by NIA-Reagan pathological diagnosis, using a dichotomized approach
+
+specimenID_wNIA_reagan <- metadata %>% 
+  filter(!is.na(dicho_NIA_reagan))
+dim(specimenID_wNIA_reagan)
+#[1] 434  14
+
+AD_pathology <- metadata %>% 
+  filter(dicho_NIA_reagan == 1)
+dim(AD_pathology)
+#[1] 255  14
+
+no_AD_pathology <-metadata %>% 
+  filter(dicho_NIA_reagan == 0)
+dim(no_AD_pathology)
+#[1] 179  14
+
+#Alternatively, --- --- 
 
 #Filter by clinical diagnosis (cogdx variable is blind to pathological post mortem diagnosis)
 #In many studies, we can use only antemortem dx variables
@@ -48,30 +62,37 @@ AD_cogdx <- metadata %>%
 dim(AD_cogdx)
 #[1] 222   14   #254 individuals with probable or possible AD
 
-#Filter by NIA-Reagan pathological diagnosis, using a dichotomized approach
-
-specimenID_wNIA_reagan <- metadata %>% 
-  filter(!is.na(dicho_NIA_reagan))
-dim(specimenID_wNIA_reagan)
-#[1] 434  14
-
-AD_pathology <- metadata %>% 
-  filter(dicho_NIA_reagan == 1)
-dim(AD_pathology)
-#[1] 255  14
-
-no_AD_pathology <-metadata %>% 
-  filter(dicho_NIA_reagan == 0)
-dim(no_AD_pathology)
-#[1] 179  14
-
 #Read counts data --- ---
 
 counts <- vroom::vroom(file = '/datos/rosmap/FPKM_data/ROSMAP_QCed_count_matrixfiltered_090224.tsv')
 dim(counts)
 #[1] 14951   625
 
-# Finally we subset RNAseq counts by cogdx ----------
+# Finally we subset RNAseq counts by  diagnosis --- ---
+
+# Subset RNAseq FPKMS by pathological var 
+
+#To obtain all NIA_reagan_counts ()
+NIA_reagan_counts <- counts %>% 
+  dplyr::select(1, all_of(specimenID_wNIA_reagan$specimenID))
+dim(NIA_reagan_counts)
+#[1] 14951   435
+
+#To obtain all NIA_reagan AD counts
+
+AD_pathology_counts <- counts %>%
+  dplyr::select(1, all_of(AD_pathology$specimenID))
+dim(AD_pathology_counts)
+#[1] 14951   256
+
+#To obtain all NIA_reagan noAD counts
+
+noAD_pathology_counts <- counts %>%
+  dplyr::select(1, all_of(no_AD_pathology$specimenID))
+dim(noAD_pathology_counts)
+#[1] 14951   180
+
+#By a clinical var
 
 cogdxNCI_counts <- counts %>%
   dplyr::select(1, all_of(NCI_cogdx$specimenID))
@@ -88,45 +109,25 @@ cogdxAD_counts <- counts %>%
 dim(cogdxAD_counts)
 #[1] 14951   223
 
-# Subset RNAseq FPKMS by NIA_reagan dichotomous dx----------
-
-NIA_reagan_counts <- counts %>% 
-  dplyr::select(1, all_of(specimenID_wNIA_reagan$specimenID))
-dim(NIA_reagan_counts)
-#[1] 14951   435
-
-AD_pathology_counts <- counts %>%
-  dplyr::select(1, all_of(AD_pathology$specimenID))
-dim(AD_pathology_counts)
-#[1] 14951   256
-
-noAD_pathology_counts <- counts %>%
-  dplyr::select(1, all_of(no_AD_pathology$specimenID))
-dim(noAD_pathology_counts)
-#[1] 14951   180
-
 #Save tables as needed --- --- 
 
-vroom_write(NIA_reagan_counts, 
-      file = '/datos/rosmap/FPKM_data/ROSMAP_NIA_reagandicho_counts_notdis.tsv')
+#vroom_write(NIA_reagan_counts, file = '/datos/rosmap/FPKM_data/ROSMAP_NIA_reagandicho_counts_notdis.tsv')
 
 ####  Data discretization --- ---
 
 #this generates a discretized expression matrix
 
-mat_dis <- infotheo::discretize(t(NIA_reagan_counts[-1])) # I t() because we want genes to be columns to calculate MI in next script
-dim(mat_dis)
-#[1]   434 14951
+mat_dis <- infotheo::discretize(t(AD_pathology_counts[-1])) # I t() because we want genes to be columns to calculate MI in next script
 
 #Regenerate gene names in cols and specimenIDs in rows
 
-colnames(mat_dis) <- NIA_reagan_counts$ensembl_gene_id
+colnames(mat_dis) <- AD_pathology_counts$ensembl_gene_id
 
 mat_dis <- mat_dis %>% 
-  mutate(specimenID = colnames(NIA_reagan_counts)[-1], .before = 1)
+  mutate(specimenID = colnames(AD_pathology_counts)[-1], .before = 1)
 
 #Save discretized matrix --- --- 
 
-#vroom::vroom_write(mat_dis, file = "/datos/rosmap/discretized_matrix/ROSMAP_allNIAReaganspecimen_discretizedmatrix_10022024.tsv")
+vroom::vroom_write(mat_dis, file = "/datos/rosmap/discretized_matrix/ROSMAP_noAD_NIAReagan_discretizedmatrix_10022024.tsv")
 
 ###Next script is 3.mutualinformation_matrix.R
