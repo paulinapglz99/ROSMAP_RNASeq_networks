@@ -12,8 +12,7 @@ pacman::p_load('tidyverse',
 
 #Read adjacency matrix --- ---
 
-matrix <- vroom::vroom(file = '/datos/rosmap/matriz_coexpre_noMCI_11052023_zero.txt') %>% 
-   as.data.frame()
+matrix <- vroom::vroom(file = '/datos/rosmap/matriz_coexpre_noMCI_11052023_zero.txt') %>% as.data.frame()
 
 #Pivot  ----
 

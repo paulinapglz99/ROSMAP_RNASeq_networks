@@ -1,19 +1,21 @@
+#
+#3.rds_to_matrix.R
 #Script to convert RDS file to matrix
-#Script by Aidee Lashmi
+#Script by Aidee Lashmi and paulinapglz.99@gmail.com
 
-#libraries ---
+#libraries --- ---
 
 library(tidyverse)
 library(Matrix)
-mi_list <- read_rds("ROSMAP_RNAseq_MutualInfo_allMCI_matrix.rds")
 
-#Unneest RDS ---
+#Get data  --- ---
+#Read Mutual information matrix
 
-coexpre_mat_unnested <-as.data.frame(do.call(cbind, mi_list))
+mi_list <- read_rds('/datos/rosmap/coexpre_matrix/')
 
-coexpre_mat_unnested %>% as_tibble()
+#Unneest RDS --- ---
 
-mm <- coexpre_mat_unnested %>% as.matrix() 
+coexpre_mat_unnested <- as.data.frame(do.call(cbind, mi_list)) %>% as.matrix() 
 
 mm2 <- mm
 

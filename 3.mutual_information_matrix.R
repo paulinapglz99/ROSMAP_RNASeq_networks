@@ -7,9 +7,10 @@ pacman::p_load('future',
              'tidyverse', 
              'furrr', 
              'infotheo')
+
 #read data ----------
 
-mat_dis <- vroom::vroom(file = '/datos/rosmap/discretized_matrix/ROSMAP_noAD_NIAReagan_discretizedmatrix_10022024.tsv')
+mat_dis <- vroom::vroom(file = '/datos/rosmap/discretized_matrix/ROSMAP_noAD_NIAReagan_discretizedmatrix_15022024.tsv')
 
 # indexing data --------------
 
@@ -43,14 +44,14 @@ tempus <- Sys.time()
 MI_MI <- future_map(
   .x = my_index_i,      #named vector where we are going to apply a function .f
   .f = function(k){     #create function that calculates MI between a vector k...
-kk = mat_dis[k]     
+kk = mat_dis[k]
  map(
    .x = my_index_i,     #same named vector
      .f = function(m){
   mm = mat_dis[m]       #...and a vector m
    mutinformation(kk,mm)
  })
-})
+}, .progress = TRUE)
 
 #print time ----
 
@@ -58,6 +59,6 @@ print(Sys.time() - tempus)
 
 #write matrix ----
 
-saveRDS(MI_MI, "ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho.rds")
+saveRDS(MI_MI, "/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho.rds")
 
 #Next script is the 4.rds_to_matrix.R and 5.zero_diag.R
