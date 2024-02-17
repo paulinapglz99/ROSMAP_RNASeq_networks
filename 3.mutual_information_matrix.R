@@ -61,4 +61,4 @@ print(Sys.time() - tempus)
 
 saveRDS(MI_MI, "/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho.rds")
 
-#Next script is the 4.rds_to_matrix.R and 5.zero_diag.R
+#Next script is the 3.1.rds_to_matrix.R

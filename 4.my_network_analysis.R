@@ -12,50 +12,32 @@ pacman::p_load('tidyverse',
 
 #Read adjacency matrix --- ---
 
-matrix <- vroom::vroom(file = '/datos/rosmap/matriz_coexpre_noMCI_11052023_zero.txt') %>% as.data.frame()
-
+matrix <- read_rds('/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_zero.rds') %>% as.data.frame()
+matrix2<- vroom::vroom('/datos/rosmap/coexpre_matrix/matriz_coexpre_noMCI_11052023_zero.txt')
 #Pivot  ----
+#this gives a table of connections between genes
 
-matrix_MI <- matrix %>% 
-  pivot_longer(cols = -gene,
-               names_to = 'gene_to',
-               values_to = 'mi')      #slow, paralelize
+MI_matriz_long <- matrix %>%
+  rownames_to_column(var = "gene") %>%
+  pivot_longer(-gene, names_to = "gene_to", values_to = "MI")
 
 ########--- 
-
-#Mutual Information histogram
-
-hist(matrix_MI$mi)
-
-#Full net histogram
-#No correr este histograma a menos que tengas tiempo
-
-hist_MI<- ggplot(matrix_MI, aes(x = mi)) +
-  geom_histogram(fill = "skyblue", color = "white") +
-  labs(title = "Histograma de Informacion Mutua",
-       subtitle = "Para sujetos ROSMAP sin demencia, sin corte de MI",
-       x = "Informacion Mutua", y = "Frecuencia")
-
-
-# Guardamos el plot
-#ggsave( filename = "hist_allAD_MI_nocutt.png",  # el nombre del archivo de salida        plot = hist_allAD_MI,           # guardamos el ultimo grafico que hicimos
-#       width = 10,                # ancho de n pulgadas
-#       height = 8,               # alto n de pulgadas
-#       dpi = 600 )               # resolucion de 600 puntos por pulgada
-
 
 #Mutual information cuts -------
 
 #MI>0.5
 
-matrix_MI_0.5 <- matrix_MI %>% 
- filter(mi >= 0.5)
+matrix_MI_0.5 <- MI_matriz_long %>% 
+ filter(MI >= 0.5)
+dim(matrix_MI_0.5)
 
-hist_MI0_5 <- ggplot(matrix_MI_0.5, aes(x = mi)) +
-  geom_histogram(fill = "skyblue", color = "white") +
-  labs(title = "Histograma de Informacion Mutua",
-       subtitle = "Para sujetos ROSMAP sin demencia, corte MI > 0.5",
-       x = "Informacion Mutua", y = "Frecuencia") +
+#Plotting
+
+ggplot(matrix_MI_0.5, aes(x = MI)) +
+  geom_bar(fill = "skyblue", color = "white") +
+  labs(title = "mutual information histogram",
+       subtitle = "patients with AD",
+       x = "Mutual Information", y = "freq") +
   scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
 
 
@@ -151,8 +133,6 @@ fineblanking_list_table <- bind_rows(fineblanking_list)
 
 #Cut will be at 0.532
 
-                     
-
 #Construct graph ----
 
 #MI>0.532
@@ -187,5 +167,4 @@ degree(graphMI_0.532) #devuelve un vector donde para cada nodo tengo el valor de
 E(graph0.5)$betweenneess <- betweenness(graph0.5,
                                           directed = F)
 
-#Next script is the coreness analysis 
-
+#Next script is 5.network_coreness_analysis.R 

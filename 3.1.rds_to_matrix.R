@@ -10,7 +10,7 @@ pacman::p_load(tidyverse, Matrix)
 #Get data  --- ---
 #Read Mutual information matrix in rds format
 
-mi_list <- read_rds('/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds')
+mi_list <- read_rds('/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho.rds')
 
 #Unnest RDS --- ---
 
@@ -30,4 +30,6 @@ diag(coexpre_mat_unnested) <- 0
 
 #Save matrix --- ---
 
-vroom::vroom_write(coexpre_mat_unnested, file = '/datos/rosmap/ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds')
+saveRDS(coexpre_mat_unnested, file = '/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_zero.rds')
+
+#Next script is 4.my_network_analysis.R
