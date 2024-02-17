@@ -1,36 +1,33 @@
 #
 #3.rds_to_matrix.R
-#Script to convert RDS file to matrix
+#Script to convert RDS file to matrix and equal diagonal MI matrix to 0
 #Script by Aidee Lashmi and paulinapglz.99@gmail.com
 
 #libraries --- ---
 
-library(tidyverse)
-library(Matrix)
+pacman::p_load(tidyverse, Matrix)
 
 #Get data  --- ---
-#Read Mutual information matrix
+#Read Mutual information matrix in rds format
 
-mi_list <- read_rds('/datos/rosmap/coexpre_matrix/')
+mi_list <- read_rds('/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds')
 
-#Unneest RDS --- ---
+#Unnest RDS --- ---
 
-coexpre_mat_unnested <- as.data.frame(do.call(cbind, mi_list)) %>% as.matrix() 
+coexpre_mat_unnested <- as.data.frame(do.call(cbind, mi_list)) %>% as.matrix()
+dim(coexpre_mat_unnested) #this must be a square matrix
+#[1] 14951 14951
 
-mm2 <- mm
+#If the diagonal of the matrix does not have the same values, we must verify
+#that at least the elements in the diagonal are the highest values of the columns.
 
-mm2[upper.tri(mm2)]  <- mm2[lower.tri(mm2)]
+IM_test <- coexpre_mat_unnested[, 5] %>% as.data.frame() #place the column you want to test in the brackets [,n].
+max(IM_test) #max number must be the diagonal value
 
-#mm2   %>% as_tibble() %>% pull(1) %>% unlist() %>% as.numeric() %>% length() #vroom::vroom_write(x = "/datos/rosmap/matriz_coexpre_20231011.txt")
+#Set the diagonal to 0 --- ---
 
-mm3 <- mm2   %>% as_tibble() %>% mutate(V1 = colnames(.)) %>% pivot_longer(cols = -V1, names_to = "V2", values_to = "value") 
-mm3 <- mm3 %>% mutate(value = mm3$value %>% sapply(FUN = function(i){ifelse(is.null(i), 0, i)}))
+diag(coexpre_mat_unnested) <- 0
 
-#Write mew matrix
+#Save matrix --- ---
 
-mm3 %>% vroom::vroom_write("matriz_coexpre_allMCI_11052023.txt") #change name file every time
-
-mm3 %>% 
-  rename(gene = V1) %>% 
-  pivot_wider(id_cols = gene, names_from = V2, values_from = value) %>% 
-  vroom::vroom_write("matriz_coexpre_allMCI_11052023.txt")
+vroom::vroom_write(coexpre_mat_unnested, file = '/datos/rosmap/ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds')
