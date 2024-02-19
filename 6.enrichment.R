@@ -1,5 +1,7 @@
-#Script que hace enrichment de redes
-
+#
+#6.enrichment.R
+#Script for a gene-list enrichment
+#paulinapglz.99@gmail.com
 
 pacman::p_load(clusterProfiler)
 

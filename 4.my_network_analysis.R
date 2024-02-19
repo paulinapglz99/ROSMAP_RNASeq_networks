@@ -13,13 +13,29 @@ pacman::p_load('tidyverse',
 #Read adjacency matrix --- ---
 
 matrix <- read_rds('/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_zero.rds') %>% as.data.frame()
-matrix2<- vroom::vroom('/datos/rosmap/coexpre_matrix/matriz_coexpre_noMCI_11052023_zero.txt')
+
 #Pivot  ----
 #this gives a table of connections between genes
 
 MI_matriz_long <- matrix %>%
-  rownames_to_column(var = "gene") %>%
-  pivot_longer(-gene, names_to = "gene_to", values_to = "MI")
+  rownames_to_column(var = "ensembl_gene_id") %>%
+  pivot_longer(-ensembl_gene_id, names_to = "gene_to", 
+               values_to = "MI")
+dim(MI_matriz_long)
+
+#Plot MI distribution
+
+#This histogram is necessary to decide on the following mutual information cutoffs 
+
+hist(as.numeric(MI_matriz_long$MI), 
+     col = "skyblue",      # Color de las barras
+     border = "white",     # Color del borde de las barras
+     main = "Mutual information histogram",   # Título principal
+     sub = "patients with AD, no MI cut",   # Subtítulo
+     xlab = "Mutual Information",   # Etiqueta del eje x
+     ylab = "freq",   # Etiqueta del eje y
+     labels = FALSE   # Deshabilitar la notación científica en el eje y
+)
 
 ########--- 
 
@@ -30,32 +46,41 @@ MI_matriz_long <- matrix %>%
 matrix_MI_0.5 <- MI_matriz_long %>% 
  filter(MI >= 0.5)
 dim(matrix_MI_0.5)
+#[1] 440646      3
 
-#Plotting
+#Plot MI distribution
 
-ggplot(matrix_MI_0.5, aes(x = MI)) +
-  geom_bar(fill = "skyblue", color = "white") +
-  labs(title = "mutual information histogram",
-       subtitle = "patients with AD",
-       x = "Mutual Information", y = "freq") +
-  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+hist(as.numeric(matrix_MI_0.5$MI), 
+     col = "skyblue",      # Color de las barras
+     border = "white",     # Color del borde de las barras
+     main = "Mutual information histogram",   # Título principal
+     sub = "patients with AD, cut on MI >= 0.5",   # Subtítulo
+     xlab = "Mutual Information",   # Etiqueta del eje x
+     ylab = "freq",   # Etiqueta del eje y
+     labels = FALSE   # Deshabilitar la notación científica en el eje y
+)
 
 
 #MI>0.8
 
-matrix_MI_0.8 <- matrix_MI %>% 
-  filter(mi >= 0.8)
+matrix_MI_0.8 <- matrix_MI_0.5 %>% 
+  filter(MI >= 0.8)
 
-hist_MI0_8 <- ggplot(matrix_MI_0.8, aes(x = mi)) +
-  geom_histogram(fill = "skyblue", color = "white") +
-  labs(title = "Histograma de Informacion Mutua",
-       subtitle = "Para sujetos ROSMAP con cogdx de AD, corte MI > 0.8",
-       x = "Informacion Mutua", y = "Frecuencia") +
-  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+#Plot MI distribution
 
-#Build net from pivot data ----
+hist(as.numeric(matrix_MI_0.8$MI), 
+     col = "skyblue",      # Color de las barras
+     border = "white",     # Color del borde de las barras
+     main = "Mutual information histogram",   # Título principal
+     sub = "patients with AD, cut on MI >= 0.8",   # Subtítulo
+     xlab = "Mutual Information",   # Etiqueta del eje x
+     ylab = "freq",   # Etiqueta del eje y
+     labels = FALSE   # Deshabilitar la notación científica en el eje y
+)
 
-graph <- graph_from_data_frame(matrix_MI, 
+#Build net from pivot data --- ---
+
+graph <- graph_from_data_frame(MI_matriz_long, 
                                  directed = F)  #full net
 
 graph0.5 <- graph_from_data_frame(matrix_MI_0.5, 
@@ -64,13 +89,15 @@ graph0.5 <- graph_from_data_frame(matrix_MI_0.5,
 graph0.8 <- graph_from_data_frame(matrix_MI_0.8, 
                                      directed = F) #cut on 0.8
 
-#write graphs in graphml ----
+#write graphs in graphml --- ---
 
-#write_graph(graphAD_0.5, 
-#           file = 'coexpre_noMCI_16112023_graph_MI0.5.graphml', 
-#           'graphml') #'edgelist.txt' / '.graphml'
+#write_graph(graph0.8,
+#           file = '/datos/rosmap/cut_by_MI_one_component/graph0.8_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.graphml', 
+#          'graphml') #'edgelist.txt' / '.graphml'
 
-#Network generalities ---
+####
+
+#Network generalities --- ---
 
 #Summary 
 
@@ -78,7 +105,7 @@ summary(graph0.5) #resumen
 
 #Number of components 
 
-components(graphAD0.8) #saber cuantos componentes tiene
+components(graph0.5) #saber cuantos componentes tiene
 
 #Degree by node 
 
@@ -86,12 +113,12 @@ degree(graph0.5) #devuelve un vector donde para cada nodo tengo el valor de grad
 
 #edge betweenneess
 
-E(graph0.5)$betweenneessAD <- betweenness(graph0.5,
-            directed = F)
+V(graph0.8)$betweenneess <- betweenness(graph0.8, directed = F)
 
-#Iterative cutt --------
+#Iterative cut --- ---
 
-# Función para construir la red y obtener el número de componentes
+# Function to build the network and obtain the number of components
+
 generate_network_and_components <- function(matrix_MI, cutoff) {
   matrix_MI_filtrado <- matrix_MI %>%
     filter(mi >= cutoff)
@@ -103,11 +130,11 @@ generate_network_and_components <- function(matrix_MI, cutoff) {
   return(result)
 }
 
-# Iterar sobre los valores de corte de 0.01 a 0.8 en incrementos de 0.01
+# Iterate over cutoff values from 0.01 to 0.8 in 0.01 increments.
 
 cutoff_values <- seq(0.5, 0.8, by = 0.01)
 
-# Crear una lista para almacenar los resultados
+# Create a list to store the results
 
 results_list <- lapply(cutoff_values, function(cutoff) {
   generate_network_and_components(matrix_MI, cutoff)
@@ -121,7 +148,7 @@ cutoff_table <- bind_rows(results_list)
 
 fineblanking_cutoff_values <- seq(0.53, 0.54, by = 0.001)
 
-# Crear una lista para almacenar los resultados
+# Create a list to store the results
 
 fineblanking_list <- lapply(fineblanking_cutoff_values, function(cutoff) {
   generate_network_and_components(matrix_MI, cutoff)
@@ -133,7 +160,7 @@ fineblanking_list_table <- bind_rows(fineblanking_list)
 
 #Cut will be at 0.532
 
-#Construct graph ----
+#Construct graph --- ---
 
 #MI>0.532
 
