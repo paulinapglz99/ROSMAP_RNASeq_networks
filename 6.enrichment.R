@@ -3,7 +3,7 @@
 #Script for a gene-list enrichment
 #paulinapglz.99@gmail.com
 
-pacman::p_load(clusterProfiler)
+#Installing ClusterProfiler
 
 #Libraries
 
@@ -13,11 +13,15 @@ pacman::p_load(clusterProfiler,
 # Lectura de la tabla de genes diferencialemente expresados
 degs = readRDS("data/degs.RDS")
 
+
+list <- c("a", "b", "c", "d")
+list <- rba_enrichr_libs()
+
 # necesitamos el log2 fold change 
 original_gene_list <- degs$logFC
 
 # Nombramos el vector
-names(original_gene_list) <- degs$ESGN
+names(original_gene_list) <- degs$ES
 
 # eliminamos cualquier NA 
 gene_list<-na.omit(original_gene_list)
