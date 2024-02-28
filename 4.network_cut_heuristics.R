@@ -1,20 +1,21 @@
 #
 #4.my_network_analysis.R
-#script that analyzes coexpression matrices (adjacency matrices) and converts them 
-#into graph format with igraph, for later visualization and analysis.
+#Script that analyzes co-expression matrices (adjacency matrices) and converts them 
+#into graph format with igraph, using heuristics for a cut in the MI, for later visualization and analysis.
+
 #paulinapglz.99@gmail.com
 
 #NOTE for this script
 
 #This script is designed to filter the interactions of a complete graph using three heuristics:
-#1. My cut-off according to the mutual information distribution of a network
-#2.. The single component minimum graph and the percentile cut heuristic. The minimal graph approach is a 
+#1. Mutual Information cut-off according to the MI distribution of a network
+#2. The single component minimum graph. The minimal graph approach is a 
 #topological heuristic that looks for a graph that maintains a unique component with as few interactions as possible. 
 #3.The percentile-cut approach is explained as a method to obtain the percentiles with edges with the highest
-#mutual information (top edges). You can choose an approach depending on what you want to analyze or
-#compare them
+#mutual information (top edges). 
 
-
+#You can choose an approach depending on what you want to analyze or compare them. I recommend to get your data and only use one 
+#heuristic at a time
 
 #Libraries  --- --- 
 
@@ -54,39 +55,29 @@ hist(as.numeric(full_edgelist$MI),
 )
 dev.off()
 
-#Build net from pivot data, ONLY IF NECESSARY, this net is huge
+#If we look at the histogram, we will notice that there is a point in the MI distribution where we see a dip, 
+#which is called the 'tail of the histogram'. The first approach is to make a cut in this tail. 
 
-graph <- graph_from_data_frame(full_edgelist, 
-                               directed = F)  #full net
+matrix_MI_tailcut<- full_edgelist %>% 
+  filter(MI >= 0.5)   
+dim(matrix_MI_tailcut)
+#[1] 440646      3
 
-#Add graph characteristics 
+#Build graph
 
-#Number of edges
-
-graph$E <- E(graph)
-
-#Name of vertices
-
-graph$V <- V(graph)
+tailcut_graph <-  graph_from_data_frame(matrix_MI_tailcut, directed = F)
 
 #Components
 
-graph$components <- components(graph)
+components(tailcut_graph)
 
-#$no [1] 28 there's 28 components
+#Save graph
 
-#Degree by node 
+#write graphs in graphml --- ---
 
-graph$degree <- degree(graph) 
-
-#Coreness by node
-
-graph$coreness <- coreness(graph)
-
-#edge betweenneess by node
-
-V(graph)$betweenneess <- betweenness(graph, directed = F)
-
+#write_graph(tailcut_graph,
+#            file = '/datos/rosmap/cut_by_MI_one_component/tailcut_graph_MI_0.5_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.graphml', 
+#            'graphml') #'edgelist.txt' / '.graphml'
 
 
 ########--- 2nd HEURISTIC: minimal single component --- ########
@@ -185,8 +176,8 @@ cutoff_table <- bind_rows(results_list)
 #2         0.11              1
 #3         0.12              1
 #4         0.13              1
-#5         0.14              1
-#6         0.15              2
+#5         0.14              1 <--------
+#6         0.15              2 <--------
 #7         0.16              2
 #8         0.17              2
 #9         0.18              5
@@ -217,7 +208,7 @@ cutoff_table <- bind_rows(results_list)
 #2        0.141              1
 #3        0.142              1
 #4        0.143              1
-#5        0.144              1 <--------------- 
+#5        0.144              1 <--------
 #6        0.145              2
 #7        0.146              2
 #8        0.147              2
@@ -267,11 +258,49 @@ write_graph(min_sin_comp_graph,
 
 #The P percentile indicates the value below which a specific percentage of the data falls.
 
-# Define the desired percentiles
+# Percentile 90 --- --- 
 
-percentiles <- c(99.99, 99.9)
+percentile_90 <- quantile(as.numeric(full_edgelist$MI), 0.9)
+#     90%  of observations are above 0.1830432 
 
-resultados <- quantile(as.numeric(full_edgelist$MI), probs = 9/100)
+percentile_90_table <- subset(full_edgelist, as.numeric(MI) > percentile_90)
+dim(percentile_90_table)
+#[1] 22353240        3
 
+#write graph
+
+graph_percentile90 <- graph_from_data_frame(percentile_90_table, directed = F)
+
+#analyze
+
+components(graph_percentile90)
+
+#write graphs --- ---
+
+write_graph(graph_percentile90,
+            file = '/datos/rosmap/cut_by_MI_one_component/graph_percentile90_MI_0.18_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.graphml', 
+            'graphml') #'edgelist.txt' / '.graphml'
+
+# Percentile 80 --- --- 
+
+percentile_80 <- quantile(as.numeric(full_edgelist$MI), 0.8)
+#     80%  0.1256503 
+
+percentile_80_table <- subset(full_edgelist, as.numeric(MI) > percentile_80)
+dim(percentile_80_table)
+#[1] 44706480        3
+
+# graph
+
+graph_percentile80 <- graph_from_data_frame(percentile_80_table, directed = F)
+
+#write graphs --- ---
+
+write_graph(graph_percentile80,
+            file = '/datos/rosmap/cut_by_MI_one_component/graph_percentile80_MI_0.126_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.graphml', 
+            'graphml') #'edgelist.txt' / '.graphml'
+
+
+#You can performm further analysis to graphs in cytoscape or with igraph
 
 #Next script is 5.network_coreness_analysis.R 
