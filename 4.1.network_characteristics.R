@@ -7,7 +7,6 @@
 
 pacman::p_load('tidyverse', 
                'igraph',
-               'data.table',
                'ggplot2')
 
 #If needed, read adjacency matrix and pivot it to build an edgelist --- ---
@@ -36,14 +35,14 @@ edgelist_prueba <- full_edgelist[1:100, ]
 
 #Function to obtain the edgelists per percentile
 
-calcular_percentiles <- function(data, percentiles) {
+calculate_percentiles <- function(data, percentiles) {
   result_list <- list()
   
   for (p in percentiles) {
     percentile_value <- quantile(as.numeric(data$MI), p)
     table_subset <- subset(data, as.numeric(MI) > percentile_value)
     
-    result_list[[paste0("percentile_", gsub("\\.", "", as.character(p)))]] <- list(
+    result_list[[paste0("percentile_", gsub("\\.", "", as.character(p*100)))]] <- list(
       percentile_value = percentile_value,
       table = table_subset
     )
@@ -52,38 +51,81 @@ calcular_percentiles <- function(data, percentiles) {
   return(result_list)
 }
 
-#Calcular las tablas de los percentiles para guardarlos en una lista
+#Calculate the percentile tables to store them in a list.
 
-percentiles <- c(0.1, 0.2, 0.3)
+#First assign the percentiles, already divided by 10. e.g, if you want percentile 70.5, write 0.705
 
-tablas_percentiles <- calcular_percentiles(edgelist_prueba, percentiles)
+percentiles <- c(0.99, 0.3, 0.4)
 
-#Generar una lista de grafos a partir de las tablas de percentiles en la lista
+percentile_tables <- calculate_percentiles(edgelist_prueba, percentiles)
 
-generar_grafo <- function(tablas_edgelists) {
-  grafos <- list()
+#Generate a list of networks from the percentile tables in the list
+
+generate_graph <- function(tables_edgelists) {
+  networks <- list()
   
-  for (nombre_percentil in names(tablas_edgelists)) {
-    tabla <- tablas_edgelists[[nombre_percentil]]$table
-    grafo <- graph_from_data_frame(tabla, directed = FALSE)
+  for (percentile_name in names(tables_edgelists)) {
+    table <- tables_edgelists[[percentile_name]]$table
+    graph <- graph_from_data_frame(table, directed = FALSE)
     
-    # Puedes personalizar el nombre del grafo según el percentil
-    nombre_grafo <- paste("grafo_", nombre_percentil, sep = "")
+    # You can customize the network name according to the percentile.
+    name_graph <- paste("graph_", percentile_name, sep = "")
     
-    grafos[[nombre_grafo]] <- grafo
+    networks[[name_graph]] <- graph
   }
   
-  return(grafos)
+  return(networks)
 }
 
-#
+#Generate networks results
 
-grafos_resultados <- generar_grafo(tablas_edgelists = tablas_percentiles)
-
-#Los saco de la lista
-
-for (nombre_grafo in names(grafos_resultados)) {
-  assign(nombre_grafo, grafos_resultados[[nombre_grafo]])
-}
+results_networks <- generate_graph(tables_edgelists = percentile_tables)
 
 ###########HASTA AKA TODO CHIDO
+
+
+
+############################################
+
+
+  length_v <- length(V(grafo))
+  length_E <- length(E(grafo))
+  clusters_no <- clusters(grafo)$no
+  clustering_coefficient <- transitivity(grafo)
+  max_weight <- max(E(grafo)$weight)
+  min_weight <- min(E(grafo)$weight)
+
+  length(V(grafito))
+  length(E(grafito))
+  plot(grafito)
+  
+  grafete <- results_networks[[2]]
+  
+  length(V(grafete))
+  length(E(grafete))
+  plot(grafete)
+  
+  calcular_caracteristicas <- function(grafo) {
+    length_v <- length(V(grafo))
+    length_E <- length(E(grafo))
+    clusters_no <- clusters(grafo)$no
+    clusteringcoefficient <- transitivity(grafo)
+            
+    data.frame(
+      length_v = length_v,
+      length_E = length_E,
+      clusters = clusters_no,
+      clusteringcoefficient = clusteringcoefficient,
+              )
+  }
+  
+  # Aplica la función a cada grafo en la lista
+  
+  resultados_caracteristicas <- lapply(results_networks, calcular_caracteristicas)
+
+  
+  # Combina los resultados en una lista de tablas
+  tabla_resultados <- do.call(rbind, Map(cbind, nombres_grafos = names(grafos_resultados), resultados_caracteristicas))
+  
+  # Visualiza la tabla
+  print(tabla_resultados)
