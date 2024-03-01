@@ -373,7 +373,7 @@ dim(percentile_99.9999_table)
 
 #Histogram of MI distribution 
 
-png("MI_distribution_percentile9.9999_histogram_ROSMAP_AD_RNA_seq.png")
+png("MI_distribution_percentile99.9999_histogram_ROSMAP_AD_RNA_seq.png")
 hist(as.numeric(percentile_99.9999_table$MI), 
      col = "skyblue",      # Color de las barras
      border = "white",     # Color del borde de las barras
