@@ -30,8 +30,19 @@ pacman::p_load('tidyverse',
 #Get edgelist --- ---
 
 full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.tsv') %>% as.data.frame()
+full_edgelist <- full_edgelist[1:100,]
 
 #Declare functions --- ---
+
+#Function to calculate p-value
+
+pvalue<-function(MI, n=100){
+  alfa = 1.062
+  beta = -48.7
+  gamma = -0.634
+  p = exp(alfa -MI*(-beta + (-gamma * n)))
+  return(p)
+}
 
 #Function to obtain the edgelists per percentile
 
@@ -59,6 +70,8 @@ generate_graph <- function(tables_edgelists) {
   for (percentile_name in names(tables_edgelists)) {
     table <- tables_edgelists[[percentile_name]]$table
     graph <- graph_from_data_frame(table, directed = FALSE)
+    # Assigning MI values to the edges
+    E(graph)$MI <- table$MI
     
     # You can customize the network name according to the percentile.
     name_graph <- paste("graph_", percentile_name, sep = "")
@@ -77,17 +90,28 @@ calculate_metrics <- function(graph) {
   # Number of edges
   length_E <- length(E(graph))
   # Number of clusters
-  clusters_no <- clusters(graph)$no
+  clusters_no <- components(graph)$no
   # Clustering coefficient
   clustering_coefficient <- transitivity(graph, type = 'undirected')
+  #Max and min weigth
+  
+  max_weight <- max(E(graph)$MI)
+  min_weight <- min(E(graph)$MI)
+  
+  #MI p-value
+  
+  p_value <- pvalue(MI = E(graph)$MI)
   
   # Output with metrics
   data.frame(
     length_v = length_v,
     length_E = length_E,
     clusters_no = clusters_no,
-    clustering_coefficient = clustering_coefficient
-  )
+    clustering_coefficient = clustering_coefficient,
+    max_weight = max_weight,
+    min_weight = min_weight,
+    p_value = p_value
+      )
 }
 
 #Applying functions --- ---
