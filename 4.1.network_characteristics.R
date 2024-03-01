@@ -105,27 +105,32 @@ results_networks <- generate_graph(tables_edgelists = percentile_tables)
   length(E(grafete))
   plot(grafete)
   
-  calcular_caracteristicas <- function(grafo) {
+  
+  calcular_metricas <- function(grafo) {
+    # Número de vértices
     length_v <- length(V(grafo))
+    # Número de aristas
     length_E <- length(E(grafo))
+    # Número de clusters
     clusters_no <- clusters(grafo)$no
-    clusteringcoefficient <- transitivity(grafo)
-            
+    # Coeficiente de clustering
+    clustering_coefficient <- transitivity(grafo)
+    
+    # Salida con las métricas
     data.frame(
       length_v = length_v,
       length_E = length_E,
-      clusters = clusters_no,
-      clusteringcoefficient = clusteringcoefficient,
-              )
+      clusters_no = clusters_no,
+      clustering_coefficient = clustering_coefficient
+    )
   }
   
-  # Aplica la función a cada grafo en la lista
+  # Aplicar la función a cada grafo de la lista
+  resultados_metricas <- lapply(results_networks, calcular_metricas)
   
-  resultados_caracteristicas <- lapply(results_networks, calcular_caracteristicas)
-
+  # Combinar los resultados en una tabla
+  tabla_metricas <- do.call(rbind.data.frame, resultados_metricas)
   
-  # Combina los resultados en una lista de tablas
-  tabla_resultados <- do.call(rbind, Map(cbind, nombres_grafos = names(grafos_resultados), resultados_caracteristicas))
+    # Mostrar la tabla
+  print(tabla_metricas)
   
-  # Visualiza la tabla
-  print(tabla_resultados)
