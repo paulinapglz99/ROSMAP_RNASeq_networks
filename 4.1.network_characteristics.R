@@ -27,14 +27,18 @@ pacman::p_load('tidyverse',
 
 #vroom::vroom_write(full_edgelist, file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv')
 
+tempus <- Sys.time()
+
 #Get edgelist --- ---
 
-full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.tsv') %>% as.data.frame()
-full_edgelist <- full_edgelist[1:100,]
+full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv') %>% as.data.frame()
 
 #Declare functions --- ---
 
 #Function to calculate p-value
+
+#Caution: this function will calculate a p-value for each MI value in every graph,   
+#Is this what we want?
 
 pvalue<-function(MI, n=100){
   alfa = 1.062
@@ -100,7 +104,7 @@ calculate_metrics <- function(graph) {
   
   #MI p-value
   
-  p_value <- pvalue(MI = E(graph)$MI)
+#  p_value <- pvalue(MI = E(graph)$MI)
   
   # Output with metrics
   data.frame(
@@ -109,8 +113,8 @@ calculate_metrics <- function(graph) {
     clusters_no = clusters_no,
     clustering_coefficient = clustering_coefficient,
     max_weight = max_weight,
-    min_weight = min_weight,
-    p_value = p_value
+    min_weight = min_weight
+ #   p_value = p_value
       )
 }
 
@@ -141,9 +145,13 @@ metric_table <- metric_table %>%
 # Show the table
 
 print(metric_table)
+
+#
+
+print(Sys.time() - tempus)
   
 #Save table
   
-#vroom::vroom_write(metric_table, file = '/datos/rosmap/cuts_by_MI/AD_graphs/metrics_percentiles_AD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
+#vroom::vroom_write(metric_table, file = '/datos/rosmap/cuts_by_MI/noAD_graphs/metrics_percentiles_noAD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
 
 #END
