@@ -1,37 +1,21 @@
 #
-#This script takes a matrix of NxN and makes iterative cuts of mutual information by percentiles.
+#4.1network_characteristics.R
+#This script takes an edgelist and makes iterative cuts of mutual information by percentiles.
 #Then, it calculates characteristics such as number of nodes, number of vertices, clustering coefficient, etc. for each graph.
-#Generates scatter plots describing the topology of each of the networks, comparing healthy and diseased subjects.
+#The next script, 4.1.network_characteristics.R Generates scatter plots describing the topology of each of the networks, comparing healthy and diseased subjects.
 
 #Libraries --- ---
 
 pacman::p_load('tidyverse', 
                'igraph')
 
-#If needed, read adjacency matrix and pivot it to build an edgelist --- ---
-
-#matrix <- read_rds('/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_zero.rds')
-
-#Pivot
-
-#this gives a table of connections between genes (edgelist)
-
-#full_edgelist <- as.data.frame(matrix) %>%
-#  rownames_to_column(var = "ensembl_gene_id") %>%
-#  pivot_longer(-ensembl_gene_id, names_to = "gene_to", 
-#              values_to = "MI")
-#dim(full_edgelist)
-# [1] 223532401         3
-
-#full_edgelist$MI <- full_edgelist$MI %>% as.numeric()
-
-#vroom::vroom_write(full_edgelist, file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv')
+#Set timer 
 
 tempus <- Sys.time()
 
 #Get edgelist --- ---
 
-full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv') %>% as.data.frame()
+full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv.gz')
 
 #Declare functions --- ---
 
@@ -40,14 +24,6 @@ full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSM
 #Caution: this function will calculate a p-value for each MI value in every graph,   
 #Is this what we want?
 
-pvalue<-function(MI, n=100){
-  alfa = 1.062
-  beta = -48.7
-  gamma = -0.634
-  p = exp(alfa -MI*(-beta + (-gamma * n)))
-  return(p)
-}
-
 #Function to obtain the edgelists per percentile
 
 calculate_percentiles <- function(data, percentiles) {
@@ -55,8 +31,8 @@ calculate_percentiles <- function(data, percentiles) {
   
   for (p in percentiles) {
     percentile_value <- quantile(as.numeric(data$MI), p)
-    table_subset <- subset(data, as.numeric(MI) > percentile_value)
-    
+    table_subset <- data %>% 
+      filter(as.numeric(MI) > percentile_value)    
     result_list[[paste0("percentile_", gsub("\\.", "", as.character(p*100)))]] <- list(
       percentile_value = percentile_value,
       table = table_subset
@@ -97,14 +73,16 @@ calculate_metrics <- function(graph) {
   clusters_no <- components(graph)$no
   # Clustering coefficient
   clustering_coefficient <- transitivity(graph, type = 'undirected')
-  #Max and min weigth
+  #Max and min MI 
+  max_MI <- max(E(graph)$MI)
+  min_MI <- min(E(graph)$MI)
   
-  max_weight <- max(E(graph)$MI)
-  min_weight <- min(E(graph)$MI)
+  #Finding the size of the biggest connected component
+  max_comp_size <- max(components(graph)$csize)
   
-  #MI p-value
-  
-#  p_value <- pvalue(MI = E(graph)$MI)
+  #Percentage of genes in larger components
+ 
+  percentage_genes_in_larger_component <- max_comp_size / vcount(graph) * 100
   
   # Output with metrics
   data.frame(
@@ -112,8 +90,10 @@ calculate_metrics <- function(graph) {
     length_E = length_E,
     clusters_no = clusters_no,
     clustering_coefficient = clustering_coefficient,
-    max_weight = max_weight,
-    min_weight = min_weight
+    max_MI = max_MI,
+    min_MI = min_MI,
+    max_comp_size = max_comp_size, 
+    percentage_genes_in_larger_component = percentage_genes_in_larger_component
  #   p_value = p_value
       )
 }
@@ -123,7 +103,7 @@ calculate_metrics <- function(graph) {
 # First assign the percentiles, already divided by 100. e.g, if you want percentile 70.5, write 0.705
 
 percentiles <- c(0.999999, 0.99999, 0.9999, 0.999, 0.99, 0.98, 0.9, 0.8)
-
+ 
 # Calculate percentile tables
 
 percentile_tables <- calculate_percentiles(full_edgelist, percentiles)
@@ -152,6 +132,24 @@ print(Sys.time() - tempus)
   
 #Save table
   
-#vroom::vroom_write(metric_table, file = '/datos/rosmap/cuts_by_MI/noAD_graphs/metrics_percentiles_noAD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
+vroom::vroom_write(metric_table, file = '/datos/rosmap/cuts_by_MI/noAD_graphs/metrics_percentiles_normalizedMI_noAD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
+
+#If you want to save graphs
+
+#graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
+
+#Obtain edgelist
+
+#edgelist_to_save <- percentile_tables[[3]] %>% as.data.frame() #Indicate the graph to save by the index
+#edgelist_to_save<- edgelist_to_save[-1]
+
+#Save in graphml format
+
+#write_graph(graph_to_save, file = '~/redesROSMAP/graphs/AD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
+#  format = "graphml")
+
+#Save graph in edgelist format
+
+#vroom::vroom_write(edgelist_to_save,  file = '/datos/rosmap/cuts_by_MI/AD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.tsv')
 
 #END

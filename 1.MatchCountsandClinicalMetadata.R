@@ -10,7 +10,7 @@ pacman::p_load('dplyr',
 
 #Read data ---------
 
-counts <- vroom::vroom(file = '/datos/rosmap/FPKM_data/RNAseq_FPKM_1_to_8_merged.csv') #ROSMAP all plates RNAseq normalized counts, archive from script 0
+counts <- vroom::vroom(file = '/datos/rosmap/FPKM_data/originalFPKM_RNASeq/RNAseq_FPKM_1_to_8_merged.csv')
 dim(counts)
 #[1] 55889   639
 metadata <- vroom::vroom(file = '/datos/rosmap/metadata/cli_bio_metadata.csv') #merged metadata for all assays, archive from script 0

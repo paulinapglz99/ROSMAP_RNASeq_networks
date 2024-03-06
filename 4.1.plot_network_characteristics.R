@@ -9,9 +9,9 @@ pacman::p_load('dplyr',
 
 #Get ddata --- ---
 
-metrics_AD <- vroom::vroom(file = '/datos/rosmap/cuts_by_MI/AD_graphs/metrics_percentiles_AD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
+metrics_AD <- vroom::vroom(file = '/datos/rosmap/cuts_by_MI/AD_graphs/metrics_percentiles_normalizedMI_AD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
 
-metrics_noAD <- vroom::vroom(file = '/datos/rosmap/cuts_by_MI/noAD_graphs/metrics_percentiles_noAD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
+metrics_noAD <- vroom::vroom(file = '/datos/rosmap/cuts_by_MI/noAD_graphs/metrics_percentiles_normalizedMI_noAD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
 
 #Manage data --- ---
 
@@ -33,8 +33,8 @@ metrics <- rbind(metrics_AD, metrics_noAD)
 
 v_plot <- ggplot(metrics, aes(x = percentile_no, y = length_v, color = dx)) +
   geom_point(size = 3) +
-  geom_line(aes(group = dx), size = 1) +
-  scale_color_brewer(palette = "Set1") +  # Puedes elegir diferentes paletas
+  geom_line(aes(group = dx), linewidth = 1) +
+  scale_color_brewer(palette = "Set1") +  # You can choose different palettes
   labs(title = "Number of vertices per cut percentile",
        subtitle = "by pathological diagnosis of Alzheimer's disease",
        x = "Percentile number",
@@ -49,7 +49,7 @@ v_plot <- ggplot(metrics, aes(x = percentile_no, y = length_v, color = dx)) +
 E_plot <- ggplot(metrics, aes(x = percentile_no, y = length_E, color = dx)) +
   geom_point(size = 3) +
   geom_line(aes(group = dx), size = 1) +
-  scale_color_brewer(palette = "Set1") +  # Puedes elegir diferentes paletas
+  scale_color_brewer(palette = "Set1") +  # You can choose different palettes
   labs(title = "Number of edges per cut percentile",
        subtitle = "by pathological diagnosis of Alzheimer's disease",
        x = "Percentile number",
@@ -62,14 +62,14 @@ E_plot <- ggplot(metrics, aes(x = percentile_no, y = length_E, color = dx)) +
 
 #Plot number of clusters
 
-cluster_plot <- ggplot(metrics, aes(x = percentile_no, y = clusters_no, color = dx)) +
+components_plot <- ggplot(metrics, aes(x = percentile_no, y = clusters_no, color = dx)) +
   geom_point(size = 3) +
   geom_line(aes(group = dx), size = 1) +
-  scale_color_brewer(palette = "Set1") +  # Puedes elegir diferentes paletas
-  labs(title = "Number of clusters per cut percentile",
+  scale_color_brewer(palette = "Set1") +  # You can choose different palettes
+  labs(title = "Number of components per cut percentile",
        subtitle = "by pathological diagnosis of Alzheimer's disease",
        x = "Percentile number",
-       y = "Number of clusters") +
+       y = "Number of components") +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
         axis.title = element_text(size = 14, face = "bold"),
@@ -81,7 +81,7 @@ cluster_plot <- ggplot(metrics, aes(x = percentile_no, y = clusters_no, color = 
 clusteringcoe_plot <- ggplot(metrics, aes(x = percentile_no, y = clustering_coefficient, color = dx)) +
   geom_point(size = 3) +
   geom_line(aes(group = dx), size = 1) +
-  scale_color_brewer(palette = "Set1") +  # Puedes elegir diferentes paletas
+  scale_color_brewer(palette = "Set1") + # You can choose different palettes
   labs(title = "Clustering coefficient per cut percentile",
        subtitle = "by pathological diagnosis of Alzheimer's disease",
        x = "Percentile number",
@@ -94,10 +94,10 @@ clusteringcoe_plot <- ggplot(metrics, aes(x = percentile_no, y = clustering_coef
 
 #Plot max weight
 
-max_weight_plot <- ggplot(metrics, aes(x = percentile_no, y = max_weight, color = dx)) +
+max_weight_plot <- ggplot(metrics, aes(x = percentile_no, y = max_MI, color = dx)) +
   geom_point(size = 3) +
   geom_line(aes(group = dx), size = 1) +
-  scale_color_brewer(palette = "Set1") +  # Puedes elegir diferentes paletas
+  scale_color_brewer(palette = "Set1") +  # You can choose different palettes
   labs(title = "Max weight per cut percentile",
        subtitle = "by pathological diagnosis of Alzheimer's disease",
        x = "Percentile number",
@@ -108,12 +108,12 @@ max_weight_plot <- ggplot(metrics, aes(x = percentile_no, y = max_weight, color 
         axis.text = element_text(size = 12),
         axis.text.x = element_text(angle = 45, hjust = 1))
 
-#Plot max weight
+#Plot min weight
 
-min_weight_plot <- ggplot(metrics, aes(x = percentile_no, y = min_weight, color = dx)) +
+min_weight_plot <- ggplot(metrics, aes(x = percentile_no, y = min_MI, color = dx)) +
   geom_point(size = 3) +
   geom_line(aes(group = dx), size = 1) +
-  scale_color_brewer(palette = "Set1") +  # Puedes elegir diferentes paletas
+  scale_color_brewer(palette = "Set1") +   # You can choose different palettes
   labs(title = "Minimal weight per cut percentile",
        subtitle = "by pathological diagnosis of Alzheimer's disease",
        x = "Percentile number",
@@ -124,8 +124,49 @@ min_weight_plot <- ggplot(metrics, aes(x = percentile_no, y = min_weight, color 
         axis.text = element_text(size = 12),
         axis.text.x = element_text(angle = 45, hjust = 1))
 
+
+#Plot max comp size
+
+max_comp_size_plot <- ggplot(metrics, aes(x = percentile_no, y = max_comp_size, color = dx)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = dx), size = 1) +
+  scale_color_brewer(palette = "Set1") +  # You can choose different palettes
+  labs(title = "Maximal component size per cut percentile",
+       subtitle = "by pathological diagnosis of Alzheimer's disease",
+       x = "Percentile number",
+       y = "Larger component size") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        axis.title = element_text(size = 14, face = "bold"),
+        axis.text = element_text(size = 12),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Plot percentage of genes in the max size comp
+
+per_genes_max_size_plot <- ggplot(metrics, aes(x = percentile_no, y = percentage_genes_in_larger_component, color = dx)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = dx), size = 1) +
+  scale_color_brewer(palette = "Set1") +  # You can choose different palettes
+  labs(title = "Percentage of genes in larger component per cut percentile",
+       subtitle = "by pathological diagnosis of Alzheimer's disease",
+       x = "Percentile number",
+       y = "Percentage of genes in larger component ") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        axis.title = element_text(size = 14, face = "bold"),
+        axis.text = element_text(size = 12),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
 #Arrange in a grid for presentation
 
-grid.arrange(v_plot, E_plot, cluster_plot, clusteringcoe_plot, max_weight, min_weight,ncol = 2)
+png('network_normalized_characteristics_bypercentile.png',
+    width     = 15,
+    height    = 25,
+    units     = "in",
+    res       = 700,
+    pointsize = 4 )
+grid.arrange(v_plot, E_plot, components_plot, clusteringcoe_plot, max_weight_plot, 
+             min_weight_plot, max_comp_size_plot, max_comp_size_plot, per_genes_max_size_plot, ncol = 2)
+dev.off()
 
 #END
