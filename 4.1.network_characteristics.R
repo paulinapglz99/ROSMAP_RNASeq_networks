@@ -15,7 +15,7 @@ tempus <- Sys.time()
 
 #Get edgelist --- ---
 
-full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv.gz')
+full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.tsv.gz')
 
 #Declare functions --- ---
 
@@ -136,20 +136,20 @@ vroom::vroom_write(metric_table, file = '/datos/rosmap/cuts_by_MI/noAD_graphs/me
 
 #If you want to save graphs
 
-#graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
+graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
 
 #Obtain edgelist
 
-#edgelist_to_save <- percentile_tables[[3]] %>% as.data.frame() #Indicate the graph to save by the index
-#edgelist_to_save<- edgelist_to_save[-1]
+edgelist_to_save <- percentile_tables[[3]] %>% as.data.frame() #Indicate the graph to save by the index
+edgelist_to_save<- edgelist_to_save[-1]
 
 #Save in graphml format
 
-#write_graph(graph_to_save, file = '~/redesROSMAP/graphs/AD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
-#  format = "graphml")
+write_graph(graph_to_save, file = '~/redesROSMAP/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
+  format = "graphml")
 
 #Save graph in edgelist format
 
-#vroom::vroom_write(edgelist_to_save,  file = '/datos/rosmap/cuts_by_MI/AD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.tsv')
+#vroom::vroom_write(edgelist_to_save,  file = '/datos/rosmap/cuts_by_MI/noAD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv')
 
 #END
