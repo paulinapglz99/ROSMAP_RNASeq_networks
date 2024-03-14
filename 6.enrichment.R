@@ -8,22 +8,18 @@
 #Libraries
 
 pacman::p_load(clusterProfiler, 
-               tidyverse)
-
-# Read a gene list
-
-gene_list <- vroom::vroom(file = '/datos/rosmap/cuts_by_MI/AD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.tsv')
-
-#Libraries --- --- 
-
-library(clusterProfiler)
-library(tidyverse)
+               "tidyverse", 
+               "org.Hs.eg.db")
 
 #BiocManager::install("org.Hs.eg.db", character.only = TRUE)
+
 library("org.Hs.eg.db", character.only = TRUE)
 
-# Necesitamos el log2 fold change 
-original_gene_list <- gene_list$table.MI
+# Lectura de la tabla de genes diferencialemente expresados
+degs = readRDS("redesROSMAP/degs.rds")
+
+# necesitamos el log2 fold change 
+original_gene_list <- degs$logFC
 
 # Nombramos el vector
 names(original_gene_list) <- degs$ESGN
@@ -49,8 +45,6 @@ genes <- na.omit(genes)
 # filtramos por mínimo log2fold change (log2FoldChange > 2)
 genes <- names(genes)[abs(genes) > 2]
 
-#Creación del objeto enrichResult
-
 go_enrich <- enrichGO(gene = genes,
                       universe = names(gene_list),
                       OrgDb = org.Hs.eg.db, 
@@ -60,26 +54,17 @@ go_enrich <- enrichGO(gene = genes,
                       pvalueCutoff = 0.05, 
                       qvalueCutoff = 0.10)
 
-#Table of results
 
 head(go_enrich)
 
-#Barplot
-
-#Upset Plot
-
 #BiocManager::install("enrichplot")
 library(enrichplot)
-upsetplot(go_enrich)
-
-#Barplot
+upsetplot(go_enrich) 
 
 barplot(go_enrich, 
         drop = TRUE, 
         showCategory = 10, 
         title = "GO Biological Pathways",
         font.size = 8)
-
-#Dotplot
 
 dotplot(go_enrich)

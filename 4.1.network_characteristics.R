@@ -70,7 +70,7 @@ calculate_metrics <- function(graph) {
   # Number of edges
   length_E <- length(E(graph))
   # Number of clusters
-  clusters_no <- components(graph)$no
+  components_no <- components(graph)$no
   # Clustering coefficient
   clustering_coefficient <- transitivity(graph, type = 'undirected')
   #Max and min MI 
@@ -88,7 +88,7 @@ calculate_metrics <- function(graph) {
   data.frame(
     length_v = length_v,
     length_E = length_E,
-    clusters_no = clusters_no,
+    components_no = components_no,
     clustering_coefficient = clustering_coefficient,
     max_MI = max_MI,
     min_MI = min_MI,

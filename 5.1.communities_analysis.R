@@ -6,11 +6,15 @@
 
 pacman::p_load('igraph',
                'igraphdata',
+               'clusterProfiler', 
+               'enrichplot',
                'dplyr')
+
+library("org.Hs.eg.db", character.only = TRUE)
 
 #Get data --- ---
 
-graph <- read_graph(file = '~/redesROSMAP/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml', 
+graph <- read_graph(file = '~/redesROSMAP/graphs/graphical_graphs/',
                     format = 'graphml')
 
 #Analyze modules --- --- 
@@ -26,21 +30,46 @@ components <- components(graph)
 #Number of components
 
 no_components <- components(graph)$no
+no_components
 
 #Calculate community membership
 
-membership <- membership(components)
+unverse_of_genes <- V(graph)$name #all the genes in the network
 
 #List of nodes by community
 
 nodes_by_community <- split(V(graph)$name, membership)
 
-#Extract bigger component
+#Enrichment by community --- ---
 
-bigger_comp <- nodes_by_community[[1]]
+#Create enrichResult object
 
-#Save list of genes
+gene_o_enrich <- enrichGO(gene = universe_of_genes,
+                      OrgDb = org.Hs.eg.db, 
+                      keyType = 'ENSEMBL',
+                      readable = TRUE,
+                      ont = "BP",
+                      pvalueCutoff = 0.05, 
+                      qvalueCutoff = 0.10)
 
-vroom::vroom_write(bigger_comp, file = '~/redesROSMAP/graphs/A')
+#Observe GO object
+
+head(gene_o_enrich)
+
+#Plot 
+
+upsetplot(gene_o_enrich)
+
+#Barplot
+
+barplot(go_enrich, 
+        drop = TRUE, 
+        showCategory = 10, 
+        title = "GO Biological Pathways",
+        font.size = 8)
+
+#Dotplot
+
+dotplot(go_enrich)
 
 #END
