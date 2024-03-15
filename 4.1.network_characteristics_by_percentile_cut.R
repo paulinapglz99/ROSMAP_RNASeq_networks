@@ -2,7 +2,7 @@
 #4.1network_characteristics.R
 #This script takes an edgelist and makes iterative cuts of mutual information by percentiles.
 #Then, it calculates characteristics such as number of nodes, number of vertices, clustering coefficient, etc. for each graph.
-#The next script, 4.1.network_characteristics.R Generates scatter plots describing the topology of each of the networks, comparing healthy and diseased subjects.
+#The next script, 4.1.plto_network_characteristics.R Generates scatter plots describing the topology of each of the networks, comparing healthy and diseased subjects.
 
 #Libraries --- ---
 

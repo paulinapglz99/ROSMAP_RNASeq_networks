@@ -46,14 +46,14 @@ v_plot <- ggplot(metrics, aes(x = percentile_no, y = length_v, color = dx)) +
         axis.text.x = element_text(angle = 45, hjust = 1))
 
 #Plot number of edges 
-E_plot <- ggplot(metrics, aes(x = percentile_no, y = length_E, color = dx)) +
+E_plot <- ggplot(metrics, aes(x = percentile_no, y = log(length_E), color = dx)) +
   geom_point(size = 3) +
   geom_line(aes(group = dx), size = 1) +
   scale_color_brewer(palette = "Set1") +  # You can choose different palettes
   labs(title = "Number of edges per cut percentile",
        subtitle = "by pathological diagnosis of Alzheimer's disease",
        x = "Percentile number",
-       y = "Number of edges") +
+       y = "Number of edges, in log scale") +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
         axis.title = element_text(size = 14, face = "bold"),
@@ -76,7 +76,7 @@ components_plot <- ggplot(metrics, aes(x = percentile_no, y = clusters_no, color
         axis.text = element_text(size = 12),
         axis.text.x = element_text(angle = 45, hjust = 1))
 
-#Plot clustering_coefficient
+#Plot clustering coefficient
 
 clusteringcoe_plot <- ggplot(metrics, aes(x = percentile_no, y = clustering_coefficient, color = dx)) +
   geom_point(size = 3) +
@@ -160,13 +160,13 @@ per_genes_max_size_plot <- ggplot(metrics, aes(x = percentile_no, y = percentage
 #Arrange in a grid for presentation
 
 png('network_normalized_characteristics_bypercentile.png',
-    width     = 15,
-    height    = 25,
+    width     = 35,
+    height    = 15,
     units     = "in",
-    res       = 700,
+    res       = 600,
     pointsize = 4 )
 grid.arrange(v_plot, E_plot, components_plot, clusteringcoe_plot, max_weight_plot, 
-             min_weight_plot, max_comp_size_plot, max_comp_size_plot, per_genes_max_size_plot, ncol = 2)
+             min_weight_plot, max_comp_size_plot, per_genes_max_size_plot, ncol = 4)
 dev.off()
 
 #END
