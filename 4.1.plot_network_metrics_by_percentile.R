@@ -60,9 +60,9 @@ E_plot <- ggplot(metrics, aes(x = percentile_no, y = log(length_E), color = dx))
         axis.text = element_text(size = 12),
         axis.text.x = element_text(angle = 45, hjust = 1))
 
-#Plot number of clusters
+#Plot number of components
 
-components_plot <- ggplot(metrics, aes(x = percentile_no, y = clusters_no, color = dx)) +
+components_plot <- ggplot(metrics, aes(x = percentile_no, y = components_no, color = dx)) +
   geom_point(size = 3) +
   geom_line(aes(group = dx), size = 1) +
   scale_color_brewer(palette = "Set1") +  # You can choose different palettes
@@ -70,6 +70,23 @@ components_plot <- ggplot(metrics, aes(x = percentile_no, y = clusters_no, color
        subtitle = "by pathological diagnosis of Alzheimer's disease",
        x = "Percentile number",
        y = "Number of components") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        axis.title = element_text(size = 14, face = "bold"),
+        axis.text = element_text(size = 12),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Plot number of components with INFOMAP
+
+
+components_INFOMAP_plot <- ggplot(metrics, aes(x = percentile_no, y = no_cluster_infomap, color = dx)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = dx), size = 1) +
+  scale_color_brewer(palette = "Set1") +  # You can choose different palettes
+  labs(title = "Number of components calculated with INFOMAP per cut percentile",
+       subtitle = "by pathological diagnosis of Alzheimer's disease",
+       x = "Percentile number",
+       y = "Number of components calculated with INFOMAP") +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
         axis.title = element_text(size = 14, face = "bold"),
@@ -124,7 +141,6 @@ min_weight_plot <- ggplot(metrics, aes(x = percentile_no, y = min_MI, color = dx
         axis.text = element_text(size = 12),
         axis.text.x = element_text(angle = 45, hjust = 1))
 
-
 #Plot max comp size
 
 max_comp_size_plot <- ggplot(metrics, aes(x = percentile_no, y = max_comp_size, color = dx)) +
@@ -165,8 +181,12 @@ png('network_normalized_characteristics_bypercentile.png',
     units     = "in",
     res       = 600,
     pointsize = 4 )
-grid.arrange(v_plot, E_plot, components_plot, clusteringcoe_plot, max_weight_plot, 
-             min_weight_plot, max_comp_size_plot, per_genes_max_size_plot, ncol = 4)
+grid.arrange(v_plot, E_plot, 
+             components_plot, clusteringcoe_plot,
+             max_weight_plot, min_weight_plot,
+             max_comp_size_plot, per_genes_max_size_plot, 
+             components_INFOMAP_plot,
+             ncol = 4)
 dev.off()
 
 #END

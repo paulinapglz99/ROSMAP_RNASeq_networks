@@ -35,6 +35,6 @@ elapsed_time <- end_time - start_time
 print(paste("Elapsed Time: ", elapsed_time))
 
 #Write data
-vroom::vroom_write(edgelist_normalized, file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv.gz')
+vroom::vroom_write(edgelist_normalized, file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_normalizedMI_edgelist.tsv.gz')
 
 #END

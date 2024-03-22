@@ -15,7 +15,7 @@ tempus <- Sys.time()
 
 #Get edgelist --- ---
 
-full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.tsv.gz')
+full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_normalizedMI_edgelist.tsv.gz')
 
 #Declare functions --- ---
 
@@ -79,10 +79,16 @@ calculate_metrics <- function(graph) {
   
   #Finding the size of the biggest connected component
   max_comp_size <- max(components(graph)$csize)
-  
   #Percentage of genes in larger components
- 
   percentage_genes_in_larger_component <- max_comp_size / vcount(graph) * 100
+  
+  #Calculate the number of communities derived from infomap algorithm
+  cluster_infomap <- cluster_infomap(graph)
+  membership_infomap <- membership(cluster_infomap)
+  
+  #Extract list of nodes by community
+  infomap_nodes_by_community <- split(V(graph)$name, membership_infomap)
+  no_cluster_infomap <- length(infomap_nodes_by_community)
   
   # Output with metrics
   data.frame(
@@ -92,10 +98,10 @@ calculate_metrics <- function(graph) {
     clustering_coefficient = clustering_coefficient,
     max_MI = max_MI,
     min_MI = min_MI,
+    no_cluster_infomap = no_cluster_infomap,
     max_comp_size = max_comp_size, 
     percentage_genes_in_larger_component = percentage_genes_in_larger_component
- #   p_value = p_value
-      )
+       )
 }
 
 #Applying functions --- ---
@@ -132,21 +138,21 @@ print(Sys.time() - tempus)
   
 #Save table
   
-vroom::vroom_write(metric_table, file = '/datos/rosmap/cuts_by_MI/noAD_graphs/metrics_percentiles_normalizedMI_noAD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt')
+vroom::vroom_write(metric_table, file = "/datos/rosmap/cuts_by_MI/AD_graphs/metrics_percentiles_normalizedMI_AD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt")
 
 #If you want to save graphs
 
-graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
+#graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
 
 #Obtain edgelist
 
-edgelist_to_save <- percentile_tables[[3]] %>% as.data.frame() #Indicate the graph to save by the index
-edgelist_to_save<- edgelist_to_save[-1]
+#edgelist_to_save <- percentile_tables[[3]] %>% as.data.frame() #Indicate the graph to save by the index
+#edgelist_to_save<- edgelist_to_save[-1]
 
 #Save in graphml format
 
-write_graph(graph_to_save, file = '~/redesROSMAP/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
-  format = "graphml")
+#write_graph(graph_to_save, file = '~/redesROSMAP/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
+#  format = "graphml")
 
 #Save graph in edgelist format
 
