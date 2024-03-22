@@ -3,15 +3,11 @@
 #Script for a gene-list enrichment
 #paulinapglz.99@gmail.com
 
-#Installing ClusterProfiler
-
 #Libraries
 
 pacman::p_load("clusterProfiler", 
-               "tidyverse", 
-               "org.Hs.eg.db")
+               "tidyverse")
 
-#BiocManager::install("org.Hs.eg.db", character.only = TRUE)
 
 library("org.Hs.eg.db", character.only = TRUE)
 
