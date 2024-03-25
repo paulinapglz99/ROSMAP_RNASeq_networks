@@ -28,8 +28,7 @@ clustering_coefficient <- transitivity(graph, type = 'undirected')
 
 #Extract all genes from whole network
 
-universe_of_genes <- V(graph)$name #all the genes in the network
-
+universe_of_genes <- V(graph)$name #all the genes in the networ
 #See membership of nodes
 components <- components(graph)
 

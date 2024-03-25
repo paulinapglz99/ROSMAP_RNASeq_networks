@@ -132,13 +132,13 @@ metric_table <- metric_table %>%
 
 print(metric_table)
 
-#
+# Print time elapsed
 
 print(Sys.time() - tempus)
   
 #Save table
   
-vroom::vroom_write(metric_table, file = "/datos/rosmap/cuts_by_MI/AD_graphs/metrics_percentiles_normalizedMI_AD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt")
+#vroom::vroom_write(metric_table, file = "/datos/rosmap/cuts_by_heuristics/AD_graphs/metrics_percentiles_normalizedMI_AD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt")
 
 #If you want to save graphs
 

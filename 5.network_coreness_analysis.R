@@ -1,4 +1,7 @@
-#Coreness analysis
+#
+#5.network_coreness_analysis.R
+#This script makes cuts by network coreness
+#paulinapglz.99@gmail.com
 
 #Libraries ----
 
@@ -10,7 +13,7 @@ pacman::p_load('tidyverse',
 graph <- read.graph(file = "noMCI_17112023_graph_MI0.532.graphml",
                     format = "graphml")
 
-#coreness ----
+#Cut by coreness ----
 
 coreness <- coreness(graph) %>% 
   as.data.frame() %>% 
@@ -51,12 +54,12 @@ hist_coreness_filter <- ggplot(coreness_filter, aes(x = core_by_node)) +
 
 coreness_filter_v <- coreness_filter$gene
 
-#haciendo un subgrafo solo con los vertices del core we want
+#Making a subgraph only with the vertices of the core we want
 
 subgraph_kcore <- induced_subgraph(graph,
                                     vids = coreness_filter_v)
 
-#plotear 
+#Plot 
 
 subraph_kcore_filter.p <- plot(subgraph_kcore)
 
