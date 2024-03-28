@@ -18,14 +18,6 @@ graph <- read_graph(file = '~/redesROSMAP/graphs/AD_ROSMAP_RNAseq_MutualInfograp
 
 #Analyze modules with igraph --- --- 
 
-#Number of components
-
-no_components <- components(graph)$no
-
-#Calculate clustering coefficient of whole network
-
-clustering_coefficient <- transitivity(graph, type = 'undirected')
-
 #Extract all genes from whole network
 
 universe_of_genes <- V(graph)$name #all the genes in the networ

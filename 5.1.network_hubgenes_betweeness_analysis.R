@@ -58,7 +58,8 @@ ggplot(hub_gene_distribution, aes(x = degree, y = ..density..)) +
 hub_genes.df <- data.frame(genes = names(nodes_degree), degree = nodes_degree)
 hub_genes.df$hub_gene <- ifelse(hub_genes.df$genes %in% names(hub_genes), "Hub Gene", "Not Hub Gene")
 
-# Crear el gráfico de puntos
+#Plot hub genes
+
 ggplot(hub_genes.df,
                       aes(x = genes, y = degree, color = hub_gene)) +
   geom_text(data = subset(hub_genes.df, hub_gene == "Hub Gene"), aes(label = genes), 
