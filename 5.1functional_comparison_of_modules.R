@@ -34,41 +34,7 @@ graphnoAD <- read_graph(file = '/datos/rosmap/graphs/noAD_ROSMAP_RNAseq_MutualIn
 graphLists <- list(graphAD = graphAD,
                   graphnoAD = graphnoAD)
 
-#Modularity algorithm 
-
-modularity <- sapply(X = graphLists, FUN = cluster_infomap)
-
-nodes_membership <- sapply(infomap_modularity, FUN = membership)
-
-# Extract list of nodes by community for each graph
-
-nodes_by_community_list <- lapply(seq_along(infomap_membership), function(i) {
-  split(V(graphLists[[i]])$name, infomap_membership[[i]])
-})
-
-#I'd like to add names to lists of graphs again
-
-names(nodes_by_community_list)[1] <- "graphAD"
-names(nodes_by_community_list)[2] <- "graphnoAD"
-
-#Extraer lista de vectores 
-
-nodes_by_community_AD <- nodes_by_community_list["graphAD"]
-
-##########################################
-
-#cluster_informap find community structure that minimizes the expected description length of a random walker trajectory 
-cluster_infomap <- cluster_infomap(graph)
-
-#See membership of nodes
-membership_infomap <- membership(cluster_infomap)
-
-#Extract list of nodes by community
-infomap_nodes_by_community <- split(V(graph)$name, membership_infomap)
-
-##########################################
-
-#Enrichment --- ---
+#Comparison of biological function sets associated to the overall network --- ---
 
 #Define functions to use
 
@@ -90,8 +56,6 @@ enrichment_fullnet_AD <- enrichGO(gene = V(graphAD)$name,
          pvalueCutoff = 0.05, 
          qvalueCutoff = 0.10)
 
-f <- names(enrichment_fullnet_AD@geneSets)
-
 #For noAD graph
 
 enrichment_fullnet_noAD <- enrichGO(gene = V(graphnoAD)$name,
@@ -102,44 +66,69 @@ enrichment_fullnet_noAD <- enrichGO(gene = V(graphnoAD)$name,
                                   pvalueCutoff = 0.05, 
                                   qvalueCutoff = 0.10)
 
-f1 <- names(enrichment_fullnet_noAD@geneSets)
-
-
-full_net_enrichment_list <- list(enrichment_fullnet_AD = enrichment_fullnet_AD, 
-                                 enrichment_fullnet_noAD = enrichment_fullnet_noAD)
-
 #Comparison of enrichments
 
-EnrichedProcessJ = jaccard_simplex(names(enrichment_fullnet_AD@geneSets), names(enrichment_fullnet_noAD@geneSets))
+OverallEnrichedProcessJ <- jaccard_simplex(names(enrichment_fullnet_AD@geneSets), names(enrichment_fullnet_noAD@geneSets))
+#[1] 0.8042686
 
-####################################
+#Similarity of modules in terms of associated biological functions --- ---
 
-for (i in seq_along(nodes_by_community_AD$graphAD)) {
-  community <- nodes_by_community_AD$graphAD[[i]]
-}
+#Modularity algorithm 
 
-results_list <- lapply(nodes_by_community_AD$graphAD, function(community) {
-  enrichment_results <- enrichGO(gene = community,
-                                 OrgDb = "org.Hs.eg.db",
-                                 keyType = 'ENSEMBL',
-                                 readable = TRUE,
-                                 ont = "BP",
-                                 pvalueCutoff = 0.05,
-                                 qvalueCutoff = 0.10)
-  
-  return(enrichment_results)
+modularity <- sapply(X = graphLists, FUN = cluster_infomap)
+
+#Split lists of nodes by module
+
+nodes_membership <- sapply(infomap_modularity, FUN = membership)
+
+# Extract list of nodes by community for each graph
+
+nodes_by_community_list <- lapply(seq_along(infomap_membership), function(i) {
+  split(V(graphLists[[i]])$name, infomap_membership[[i]])
 })
 
+#I'd like to add names to lists of graphs again
+
+names(nodes_by_community_list)[1] <- "graphAD"
+names(nodes_by_community_list)[2] <- "graphnoAD"
+
+#Extract list of nodes by community 
+
+nodes_by_community_AD <- nodes_by_community_list[["graphAD"]]
+
+nodes_by_community_noAD <- nodes_by_community_list[["graphnoAD"]]
+
+#Enrichment to all modules of a network
+
+#Define function that enrichs 
+
+enrichGO_for_vector1 <- function(gene_vector) {
+  if(length(gene_vector) >= 10) {
+    enrichGO_result <- enrichGO(gene = gene_vector,
+                                OrgDb = org.Hs.eg.db, 
+                                keyType = 'ENSEMBL',
+                                readable = TRUE,
+                                ont = "BP",          #type of GO(Biological Process (BP), cellular Component (CC), Molecular Function (MF)
+                                pvalueCutoff = 0.05, 
+                                qvalueCutoff = 0.10)
+    return(enrichGO_result)
+  } else {
+    return(NULL)  # Return NULL if the gene vector is too small
+  }
+}
+
+#Enrichment of graphAD modules
+enriched_results_AD <- lapply(nodes_by_community_AD, enrichGO_for_vector)
+
+#Enrichment of graphAD modules
+enriched_results_noAD <- lapply(nodes_by_community_noAD, enrichGO_for_vector)
+
+#It is possible to compare each module of the network of interest to the modules
+#of another network, in terms of their associated biological function
 
 
 
-enrichment_results <- enrichGO(gene = community,
-                               OrgDb = "org.Hs.eg.db",
-                               keyType = 'ENSEMBL',
-                               readable = TRUE,
-                               ont = "BP",
-                               pvalueCutoff = 0.05,
-                               qvalueCutoff = 0.10)
+
 
 #Functional module comparison
 #
