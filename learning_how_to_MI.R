@@ -24,9 +24,7 @@ map(.x = my_index1_10, .f = function(i){
 map(.x = my_index1_10, .f = function(i){
   
   paste0('yo soy ', i)
-  
 }
-
 ) 
 
 
