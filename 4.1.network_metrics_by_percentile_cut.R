@@ -19,11 +19,6 @@ full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSM
 
 #Declare functions --- ---
 
-#Function to calculate p-value
-
-#Caution: this function will calculate a p-value for each MI value in every graph,   
-#Is this what we want?
-
 #Function to obtain the edgelists per percentile
 
 calculate_percentiles <- function(data, percentiles) {
@@ -73,7 +68,7 @@ calculate_metrics <- function(graph) {
   components_no <- components(graph)$no
   # Clustering coefficient
   clustering_coefficient <- transitivity(graph, type = 'undirected')
-  #Max and min MI 
+  # Max and min MI 
   max_MI <- max(E(graph)$MI)
   min_MI <- min(E(graph)$MI)
   
@@ -142,20 +137,26 @@ print(Sys.time() - tempus)
 
 #If you want to save graphs
 
-#graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
-
-#Obtain edgelist
-
-#edgelist_to_save <- percentile_tables[[3]] %>% as.data.frame() #Indicate the graph to save by the index
-#edgelist_to_save<- edgelist_to_save[-1]
+graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
 
 #Save in graphml format
 
 #write_graph(graph_to_save, file = '~/redesROSMAP/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
 #  format = "graphml")
 
+#Save edgelist
+
+edgelist_to_save <- percentile_tables[[3]] %>% as.data.frame() #Indicate the graph to save by the index
+edgelist_to_save<- edgelist_to_save[-1]
+
 #Save graph in edgelist format
 
 #vroom::vroom_write(edgelist_to_save,  file = '/datos/rosmap/cuts_by_MI/noAD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv')
+
+#Obtain adjacency matrix
+
+adj_matrix <- as_adjacency_matrix(results_networks[[3]], sparse = FALSE, attr = "MI") %>% as.data.frame()
+
+vroom::vroom_write(adj_matrix, file = '/datos/rosmap/cuts_by_heuristics/AD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_we_adjacency_matrix.tsv')
 
 #END

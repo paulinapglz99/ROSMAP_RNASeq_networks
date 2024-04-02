@@ -182,24 +182,27 @@ num_equal_nodes <- data.frame(module_number = rownames(similarity_matrix), modul
 
 #Number of modules associated to a given biological function --- ---
 
+# Obtener la longitud del vector más corto
+min_length <- min(length(v1), length(v2))
 
-EnrichmentEuclidianDistance = function(enrichment_1, 
-                                       enrichment_2){
-  
-  tally_1 = enrichment_1 %>% group_by(rowname) %>% tally
-  tally_2 = enrichment_2 %>% group_by(rowname) %>% tally
-  join.df = full_join(x = tally_1, y = tally_2, "rowname")
-  join.df = mutate(join.df, n.x = ifelse(is.na(n.x), 0, n.x))
-  join.df = mutate(join.df, n.y = ifelse(is.na(n.y), 0, n.y))
-  join.df = mutate(join.df, diff.squared = (n.x - n.y)**2)
-  #join.df = mutate(join.df, diff = (n.x - n.y))
-  resulta = sum(join.df$diff.squared)
-  #resulta = sum(join.df$diff)
-  resulta = sqrt(resulta)
-  #print(nrow(join.df))
-  return(resulta)
-  
+# Calcular la distancia euclidiana solo para las dimensiones compartidas
+euclidean_distance <- sqrt(sum((v1[1:min_length] - v2[1:min_length])^2))
+
+print(euclidean_distance)
+
+#
+
+euclidean_distance <- matrix(NA, nrow = num_modules_AD, ncol = num_modules_noAD)
+
+# Asignar nombres de filas y columnas
+rownames(euclidean_distance) <- paste("AD", 1:num_modules_AD, sep = "_")
+colnames(euclidean_distance) <- paste("noAD", 1:num_modules_noAD, sep = "_")
+
+for (i in 1:num_modules_AD) {
+  for (j in 1:num_modules_noAD) {
+    # Acceder a los geneSets de las redes AD y no AD
+    geneSets_AD <- length(enriched_results_AD[[i]]@geneSets)
+    geneSets_noAD <- length(enriched_results_noAD[[j]]@geneSets)
+    euclidean_distance[i, j] <- sqrt(sum((v1[1:num_modules_AD] - v2[1:num_modules_noAD])^2))
+  }
 }
-
-
-  
