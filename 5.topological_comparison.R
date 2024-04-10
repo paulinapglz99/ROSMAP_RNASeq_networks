@@ -50,7 +50,7 @@ degree_distributions <- rbind(data_frame(gene = names(ADdegree), degree = ADdegr
 
 #Plot both degree distributions
 
-ggplot(degree_distributions, aes(x = degree, fill = dx)) +
+degree_dis <- ggplot(degree_distributions, aes(x = degree, fill = dx)) +
   geom_histogram(binwidth = 1, color = "black", alpha =0.5, position = "identity") +
   labs(title = "Node degree distributions",
        subtitle = "for AD and noAD coexpression networks", 
@@ -59,6 +59,14 @@ ggplot(degree_distributions, aes(x = degree, fill = dx)) +
   theme_minimal() +
   scale_fill_manual(values = c("AD" = "hotpink", "noAD" = "blue4")) +
   guides(fill = guide_legend(title = "Diagnosis"))
+
+#ggsave(filename = "~/redesROSMAP/ROSMAP_RNASeq_networks/bothdx_degree_distributions_coexpression_NIAReagan_histogram.png", 
+#       plot = degree_dis, 
+#       width = 20,
+#       height = 15, 
+#       units = "cm",
+#       dpi = 300,
+#       )
 
 #Do they have similar nodes? --- --- 
 
@@ -112,13 +120,17 @@ V(graphAD)$modules <- membership_modularity[["graphAD"]]
 
 V(graphnoAD)$modules <- membership_modularity[["graphnoAD"]]
 
+#I only want to plot some modules
+
+modules_to_plot <- names(AD_modules)
+
 # Plot the graph with ggraph and color by module.
 
 #For AD graph
 ggraph(graphAD, layout = 'kk') +
   geom_edge_link(alpha = 0.6, size = 0.3) +
   geom_node_point(aes(color = factor(modules))) +
-  scale_color_manual(values = rainbow(max(membership_modularity[["graphAD"]]))) +
+  #scale_color_manual(values = rainbow(max(membership_modularity[["graphAD"]]))) +
   theme_void() +
   ggtitle("Nodes colored by module for AD graph")
 
@@ -127,7 +139,7 @@ ggraph(graphAD, layout = 'kk') +
 ggraph(graphnoAD, layout = 'kk') +
   geom_edge_link(alpha = 0.6, size = 0.3) +
   geom_node_point(aes(color = factor(modules))) +
-  scale_color_manual(values = rainbow(max(membership_modularity[["graphnoAD"]]))) +
+  #scale_color_manual(values = rainbow(max(membership_modularity[["graphnoAD"]]))) +
   theme_void() +
   ggtitle("Nodes colored by module for noAD graph")
 
@@ -142,7 +154,7 @@ modularity_scoreAD <- modularity(graphAD, membership_modularity[["graphAD"]])
 modularity_scorenoAD <- modularity(graphnoAD, membership_modularity[["graphnoAD"]])
 #[1] 0.3790371
 
-#Comparison of modular structures between networks
+#Comparison of modular structures between networks --- --- 
 
 #To compare two networks at the modular level, it would be optimal to keep the same set of nodes. 
 #Because the heuristic cut was made on the edges, we have an unequal number of nodes in the smaller

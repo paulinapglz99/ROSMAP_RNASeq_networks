@@ -1,5 +1,5 @@
 #
-#randomize_data.R
+#null_model.R
 #When we build a network partition, we must make sure that the modularization we
 #observe is not due to chance. To do this, we can build a null model, 
 #and construct a distribution of such graphs generated from randomizations of our
@@ -18,59 +18,130 @@ pacman::p_load('tidyverse',
 #Adjacency matrices from both conditions 
 
 adjm_AD <- vroom::vroom(file = '/datos/rosmap/cuts_by_heuristics/AD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_we_adjacency_matrix.tsv')
+rownames(adjm_AD) <- colnames(adjm_AD)
 
 adjm_noAD <- vroom::vroom(file = '/datos/rosmap/cuts_by_heuristics/noAD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_we_adjacency_matrix.tsv')
+rownames(adjm_noAD) <- colnames(adjm_noAD)
+
+########################
+
+# Función para randomizar las filas de una matriz de adyacencia
+randomizar_filas <- function(matriz) {
+  return(matriz[sample(nrow(matriz)), ])
+}
+
+# Crear una matriz de adyacencia de ejemplo
+matriz_adyacencia <- matrix(c(0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0), nrow = 4, byrow = TRUE)
+
+# Número de iteraciones
+num_iteraciones <- 5
+
+# Lista para almacenar las matrices con filas randomizadas
+matrices_randomizadas <- list()
+
+# Iterar para randomizar las filas y almacenar las matrices resultantes
+for (i in 1:num_iteraciones) {
+  matriz_randomizada <- randomizar_filas(adjm_AD)
+  rownames(matriz_randomizada) <- colnames(matriz_randomizada) # Asignar nombres de columnas como nombres de filas
+  matrices_randomizadas[[i]] <- matriz_randomizada
+}
+
+
+
+######################
+
+random_adjm_AD <- adjm_AD[sample(nrow(adjm_AD)), ]
+rownames(random_adjm_AD) <- colnames(random_adjm_AD)
+
+random_adjm_AD.g <- graph_from_adjacency_matrix(random_adjm_AD)
 
 #If you want to iterate in a list of adjacecncy matrices --- ---
 
-# Función para randomizar las filas de una matriz de adyacencia
-randomize_rows <- function(adj_matrix) {
-  num_nodes <- nrow(adj_matrix)
-  random_index <- sample(num_nodes)
-  adj_matrix_randomized <- adj_matrix[random_index, random_index]
-  return(adj_matrix_randomized)
+# Define la función para randomizar las filas de una matriz de adyacencia
+randomize_adj_matrix <- function(adj_matrix) {
+  randomized_indices <- sample(nrow(adj_matrix)) # Permuta los índices de las filas
+  randomized_matrix <- adj_matrix[randomized_indices, randomized_indices] # Aplica la permutación a las filas y columnas
+  return(randomized_matrix)
 }
 
-# Lista de matrices de adyacencia
-lista_matrices <- list(
-  matrix(c(0, 1, 1, 0,
-           1, 0, 0, 1,
-           1, 0, 0, 1,
-           0, 1, 1, 0), nrow = 4, byrow = TRUE),
-  matrix(c(0, 1, 0, 1,
-           1, 0, 1, 0,
-           0, 1, 0, 1,
-           1, 0, 1, 0), nrow = 4, byrow = TRUE)
-)
+# Define la función para crear un grafo a partir de una matriz de adyacencia
+create_graph <- function(adj_matrix) {
+  graph_from_adjacency_matrix(adj_matrix, mode = "undirected")
+}
 
-# Lista para almacenar las matrices randomizadas
-lista_matrices_randomizadas <- list()
-# Lista para almacenar los grafos randomizados
-lista_grafos_randomizados <- list()
+# Crea una lista de listas para almacenar las matrices randomizadas
+randomized_matrices <- list()
 
-#Number of iterations 
+# Crea una lista para almacenar los grafos randomizados
+randomized_graphs <- list()
 
-num_iter <- 5
+# Suponiendo que tienes una matriz de adyacencia llamada adj_matrix
+# Puedes reemplazar esto con tu propia matriz
 
-# Iterar sobre cada matriz en la lista original
-for (i in seq_along(lista_matrices)) {
-  matriz_original <- lista_matrices[[i]]
-  # Crear y almacenar grafos para la matriz original
-  grafo_original <- graph_from_adjacency_matrix(matriz_original, mode = "undirected")
-  lista_grafos_randomizados[[paste0("Grafo_", i, "_original")]] <- grafo_original
+# Define el número de iteraciones para generar matrices randomizadas
+num_iterations <- 5
+
+# Itera para generar matrices randomizadas y grafos
+for (i in 1:num_iterations) {
+  randomized_matrix <- randomize_matrix(adjm_AD)
+  randomized_graph <- graph_from_adjacency_matrix(randomized_matrix, directed = F)
   
-  # Randomizar filas y crear grafos para cada matriz randomizada
-  for (j in 1:num_iter) { 
-    matriz_randomizada <- randomize_rows(matriz_original)
-    lista_matrices_randomizadas[[paste0("Matriz_", i, "_randomizada_", j)]] <- matriz_randomizada
-    grafo_randomizado <- graph_from_adjacency_matrix(matriz_randomizada, mode = "undirected")
-    lista_grafos_randomizados[[paste0("Grafo_", i, "_randomizado_", j)]] <- grafo_randomizado
-  }
+  # Agrega la matriz randomizada a la lista de matrices randomizadas
+  randomized_matrices[[i]] <- randomized_matrix
+  
+  # Agrega el grafo randomizado a la lista de grafos randomizados
+  randomized_graphs[[i]] <- randomized_graph
 }
 
-# Ahora, lista_matrices_randomizadas contiene las matrices randomizadas
-# y lista_grafos_randomizados contiene los grafos correspondientes
+# Accede a las matrices y grafos randomizados en la lista
+# Por ejemplo, para acceder a la tercera matriz randomizada:
+# third_randomized_matrix <- randomized_matrices[[3]]
 
-# Verificar los nombres de las listas
-print(names(lista_matrices_randomizadas))
-print(names(lista_grafos_randomizados))
+# Y para acceder al segundo grafo randomizado:
+# second_randomized_graph <- randomized_graphs[[2]]
+
+###########################################################################
+
+#Second approach, el rewire
+
+#Libraries --- ---
+
+pacman::p_load("igraph", 
+               "ggraph",
+               "tidyverse")
+
+#Get data --- --- 
+
+graphAD <- read_graph(file = '/datos/rosmap/graphs/AD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+
+graphnoAD <- read_graph(file = '/datos/rosmap/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+
+# 1. Cargar el grafo existente
+# Supongamos que tienes tus datos y los cargas en un grafo existente llamado 'grafo_existente'
+# Puedes cargar tu grafo de diferentes maneras, dependiendo del formato de tus datos
+
+# Definir el número de iteraciones
+num_iteraciones <- 20
+
+# Lista para almacenar los grafos randomizados
+grafos_random <- list()
+
+# Iterar para generar grafos aleatorios
+for (i in 1:num_iteraciones) {
+  # Generar una copia del grafo existente
+  grafo_random <- graphAD
+  
+  # Aplicar alguna técnica de randomización
+  # Por ejemplo, puedes utilizar rewire() para realizar un rewiring aleatorio de las aristas
+  grafo_random <- rewire(grafo_random, each_edge(prob = 0.5))
+  
+  # Almacenar el grafo aleatorio en la lista
+  grafos_random[[i]] <- grafo_random
+}
+
+#Apply modularization to all randomized graphs
+
+infomap_modularity <- sapply(X = grafos_random, FUN = cluster_infomap)
+
+#Esto genera grafos que contienen un solo modulo, por lo que no sirve para hacer el grafico de distribucion de modulos que queria hacer
+

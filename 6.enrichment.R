@@ -6,14 +6,15 @@
 #Libraries
 
 pacman::p_load("clusterProfiler", 
-               "tidyverse")
+               "tidyverse", 
+               "igraph")
 
 
 library("org.Hs.eg.db", character.only = TRUE)
 
 #Get data --- ---
 
-graph <- read_graph(file = '~/redesROSMAP/graphs/AD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
+graph <- read_graph(file = '/datos/rosmap/graphs/AD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
                     format = 'graphml')
 
 #Analyze modules with igraph --- --- 

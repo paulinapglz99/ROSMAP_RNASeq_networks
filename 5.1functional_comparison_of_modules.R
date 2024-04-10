@@ -58,7 +58,7 @@ enrichment_fullnet_noAD <- enrichGO(gene = V(graphnoAD)$name,
                                   pvalueCutoff = 0.05, 
                                   qvalueCutoff = 0.10)
 
-#Define imilarity of Enriched Processes, Jaccard Index function
+#Define imilarity of Enriched Processes, Jaccard Index function --- ---
 
 jaccard_simplex <- function(a,b){
   length(intersect(a,b))/length(union(a,b))
