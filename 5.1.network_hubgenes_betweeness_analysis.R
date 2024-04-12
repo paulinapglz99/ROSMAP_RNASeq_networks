@@ -112,18 +112,21 @@ hub_gene_AD <- hub_gene_AD[order(hub_gene_AD$degree, decreasing = TRUE), ]
 #Df
 hub_genes_AD.df <- data.frame(genes = names(nodes_degree[[1]]), degree = nodes_degree[[1]])
 hub_genes_AD.df$hub_gene <- ifelse(hub_genes_AD.df$genes %in% hub_gene_AD$gene, "Hub Gene", "Not Hub Gene")
+hub_genes_AD.df <- merge(hub_genes_AD.df, hub_gene_AD, by.x = "genes", by.y = "gene", all.x = TRUE) 
+hub_genes_AD.df<- hub_genes_AD.df[-4]
+hub_genes_AD.df <- hub_genes_AD.df %>%  rename(degree = degree.x)
 
 #p
 hub_genes_AD.p <- ggplot(hub_genes_AD.df,
                       aes(x = genes, y = degree, color = hub_gene)) +
-  geom_text(data = subset(hub_genes_AD.df, hub_gene == "Hub Gene"), aes(label = genes), 
+  geom_text(data = subset(hub_genes_AD.df, hub_gene == "Hub Gene"), aes(label = external_gene_name), 
             color = 'black', hjust = 0.5, vjust = -0.8, size = 3, check_overlap = TRUE) +  # Añadir etiquetas solo para los "hub genes"
   geom_point(size = 3) +
   theme(axis.text.x = element_blank(), legend.position = "none") +  
   labs(x = "Genes", y = "Degree", title = "Degree of Genes", subtitle = "with hub genes (95%) indicated in patients with pathological AD") +
   scale_color_manual(values = c("Hub Gene" = "#8B3A3A", "Not Hub Gene" = "#1874CD"))  
 
-#For no AD patients --- --- 
+#For no AD patients
 
 #Hub genes for no AD patients
 
@@ -145,18 +148,22 @@ hub_genes_noAD <- hub_genes_noAD[order(hub_genes_noAD$degree, decreasing = TRUE)
 
 #Plot the hub genes
 
+#df
 hub_genes_noAD.df <- data.frame(genes = names(nodes_degree[[2]]), degree = nodes_degree[[2]])
-hub_genes_noAD.df$hub_gene <- ifelse(hub_genes_noAD.df$genes %in% hub_gene_noAD$gene, "Hub Gene", "Not Hub Gene")
+hub_genes_noAD.df$hub_gene <- ifelse(hub_genes_noAD.df$genes %in% hub_genes_noAD$gene, "Hub Gene", "Not Hub Gene")
+hub_genes_noAD.df <- merge(hub_genes_noAD.df, hub_gene_AD, by.x = "genes", by.y = "gene", all.x = TRUE) 
+hub_genes_noAD.df<- hub_genes_noAD.df[-4]
+hub_genes_noAD.df <- hub_genes_noAD.df %>% rename(degree = degree.x)
 
-#Plot hub genes
+#p
 
 hub_genes_noAD.p <- ggplot(hub_genes_noAD.df,
        aes(x = genes, y = degree, color = hub_gene)) +
-  geom_text(data = subset(hub_genes_noAD.df, hub_gene == "Hub Gene"), aes(label = genes), 
+  geom_text(data = subset(hub_genes_noAD.df, hub_gene == "Hub Gene"), aes(label = external_gene_name), 
             color = 'black', hjust = 0.5, vjust = -0.8, size = 3,  check_overlap = TRUE) +  # Añadir etiquetas solo para los "hub genes"
   geom_point(size = 3) +
     theme(axis.text.x = element_blank(), legend.position = "none") +  
-  labs(x = "Genes", y = "Degree", title = "Degree of Genes", subtitle = "with hub genes indicated in patients with pathological AD") +
+  labs(x = "Genes", y = "Degree", title = "Degree of Genes", subtitle = "with hub genes indicated in patients without pathological AD") +
   scale_color_manual(values = c("Hub Gene" = "#8B3A3A", "Not Hub Gene" = "#1874CD"))  
 
 #Grid both plots --- ---
@@ -171,21 +178,26 @@ ggsave("hub_genes.png", grid_hub_genes, width = 20, height = 10, dpi = 300)
 
 #What genes do both networks share?
 
-shared_hub_genes <- intersect(hub_symbol_AD, hub_symbol_noAD)
+shared_hub_genes <- intersect(hub_gene_AD$external_gene_name, hub_genes_noAD$external_gene_name)
 
-# Genes in symbol_AD but not in symbol_noAD
-genes_en_AD_no_noAD <- setdiff(hub_symbol_AD, hub_symbol_noAD)
+# Genes in AD but not in noAD
+genes_en_AD_no_noAD <- setdiff(hub_gene_AD$external_gene_name, hub_genes_noAD$external_gene_name)
 
 # Genes in symbol_noAD but not in symbol_AD
 genes_en_noAD_no_AD <- setdiff(symbol_noAD, symbol_AD)
 
-#In ENSEMBL
+#Comparison of hub genes not found in healthy people
 
-diff_hub_genes_E <- setdiff(hub_genesAD_list, hub_genes_noAD_list)
+genes_en_AD_no_noAD.df <- hub_gene_AD %>% 
+  filter(external_gene_name %in% genes_en_AD_no_noAD)
 
 ################################################################################
 
 #Identify high betweenness nodes --- ---
+
+####
+
+#Identify high centralities genes --- ---
 
 betweenness_values <- sapply(X = graphs, FUN = betweenness)
 
@@ -198,34 +210,34 @@ for (i in 1:length(betweenness_values)) {
 
 #High betweeness nodes for AD patients
 
-high_betweenness_nodes_AD <- V(graph)$name[betweenness_values[[1]] > q_threshold.be[[1]]]
+high_betweenness_nodes_AD <- V(graphAD)$name[betweenness_values[[1]] > q_threshold.be[[1]]]
 
 high_betweenness_nodes_AD <- betweenness_values[[1]][high_betweenness_nodes_AD]
 
-#Plot the hub genes
+high_betweenness_nodes_AD <- data.frame(genes = names(high_betweenness_nodes_AD), betweenness_values = high_betweenness_nodes_AD)
 
-high_betweenness_nodes_AD.df <- data.frame(genes = names(betweenness_values[[1]]), betweenness_values = betweenness_values[[1]])
+# Convert ENSMBL a SYMBOL
 
-high_betweenness_nodes_AD.df$high_betweenness <- ifelse(high_betweenness_nodes_AD.df$genes %in% names(high_betweenness_nodes_AD), "High betweeness Gene", "Not High betweeness Gene")
+traductions_be_AD <- convert_ens_to_symbol(high_betweenness_nodes_AD$genes)
 
-#List of noAD high betweeness genes
+# Merge gene names traduction
 
-high_betweenness_nodes_AD_list <- high_betweenness_nodes_AD.df %>% 
-  filter(high_betweenness == "High betweeness Gene")
+high_betweenness_nodes_AD <- merge(high_betweenness_nodes_AD, traductions_be_AD, by.x = "genes", by.y = "ensembl_gene_id", all.x = TRUE)
 
-high_betweenness_nodes_AD_list <- as.vector(high_betweenness_nodes_AD_list$genes)
+high_betweenness_nodes_AD <- high_betweenness_nodes_AD[order(high_betweenness_nodes_AD$betweenness_values, decreasing = TRUE), ]
 
-# Convertir ENSMBL a SYMBOL
+#Plot
 
-high_be_symbol_AD <- convert_ens_to_symbol(high_betweenness_nodes_AD_list)
-
-high_be_symbol_AD <- high_be_symbol_AD$external_gene_name
+high_betweenness_nodes_AD.df <- data.frame(genes = names(betweenness_values[[1]]), betweeness = betweenness_values[[1]])
+high_betweenness_nodes_AD.df$high_betweenness <- ifelse(high_betweenness_nodes_AD.df$genes %in% high_betweenness_nodes_AD$genes, "High betweeness Gene", "Not High betweeness Gene")
+high_betweenness_nodes_AD.df <- merge(high_betweenness_nodes_AD.df, high_betweenness_nodes_AD, by.x = "genes", by.y = "genes", all.x = TRUE) 
+high_betweenness_nodes_AD.df <- high_betweenness_nodes_AD.df[-4]
 
 # Crear el gráfico de puntos
 
 high_betweenness_nodes_AD.p <- ggplot(high_betweenness_nodes_AD.df,
-                                   aes(x = genes, y = betweenness_values, color = high_betweenness)) +
-  geom_text(data = subset(high_betweenness_nodes_AD.df, high_betweenness == "High betweeness Gene"), aes(label = genes), 
+                                   aes(x = genes, y = betweeness, color = high_betweenness)) +
+  geom_text(data = subset(high_betweenness_nodes_AD.df, high_betweenness == "High betweeness Gene"), aes(label = external_gene_name), 
             color = 'black', hjust = 1.1, vjust = 0.2, size = 3) +  # Añadir etiquetas solo para los "hub genes"
   geom_point(size = 3) +
   scale_fill_manual(values = c("High betweeness Gene" = "red", "Other" = "blue")) +  # Definir los colores para las categorías
@@ -237,34 +249,34 @@ high_betweenness_nodes_AD.p
 
 #High betweeness nodes for noAD patients
 
-high_betweenness_nodes_noAD <- V(graph)$name[betweenness_values[[2]] > q_threshold.be[[2]]]
+high_betweenness_nodes_noAD <- V(graphnoAD)$name[betweenness_values[[2]] > q_threshold.be[[2]]]
 
 high_betweenness_nodes_noAD <- betweenness_values[[2]][high_betweenness_nodes_noAD]
 
-#Plot the hub genes
+high_betweenness_nodes_noAD <- data.frame(genes = names(high_betweenness_nodes_noAD), betweenness_values = high_betweenness_nodes_noAD)
 
-high_betweenness_nodes_noAD.df <- data.frame(genes = names(betweenness_values[[2]]), betweenness_values = betweenness_values[[2]])
+# Convert ENSMBL a SYMBOL
 
-high_betweenness_nodes_noAD.df$high_betweenness <- ifelse(high_betweenness_nodes_noAD.df$genes %in% names(high_betweenness_nodes_noAD), "High betweeness Gene", "Not High betweeness Gene")
+traductions_be_AD <- convert_ens_to_symbol(high_betweenness_nodes_noAD$genes)
 
-#List of noAD high betweeness genes
+# Merge gene names traduction
 
-high_betweenness_nodes_noAD_list <- high_betweenness_nodes_noAD.df %>% 
-  filter(high_betweenness == "High betweeness Gene")
+high_betweenness_nodes_noAD <- merge(high_betweenness_nodes_noAD, traductions_be_AD, by.x = "genes", by.y = "ensembl_gene_id", all.x = TRUE)
 
-high_betweenness_nodes_noAD_list <- as.vector(high_betweenness_nodes_noAD_list$genes)
+high_betweenness_nodes_noAD <- high_betweenness_nodes_noAD[order(high_betweenness_nodes_noAD$betweenness_values, decreasing = TRUE), ]
 
-# Convertir ENSMBL a SYMBOL
+#Plot
 
-high_be_symbol_noAD <- convert_ens_to_symbol(high_betweenness_nodes_noAD_list)
-
-high_be_symbol_noAD <- high_be_symbol_noAD$external_gene_name
+high_betweenness_nodes_noAD.df <- data.frame(genes = names(betweenness_values[[2]]), betweeness = betweenness_values[[2]])
+high_betweenness_nodes_noAD.df$high_betweenness <- ifelse(high_betweenness_nodes_noAD.df$genes %in% high_betweenness_nodes_AD$genes, "High betweeness Gene", "Not High betweeness Gene")
+high_betweenness_nodes_noAD.df <- merge(high_betweenness_nodes_noAD.df, high_betweenness_nodes_AD, by.x = "genes", by.y = "genes", all.x = TRUE) 
+high_betweenness_nodes_noAD.df <- high_betweenness_nodes_noAD.df[-4]
 
 # Crear el gráfico de puntos
 
 high_betweenness_nodes_noAD.p <- ggplot(high_betweenness_nodes_noAD.df,
-                                      aes(x = genes, y = betweenness_values, color = high_betweenness)) +
-  geom_text(data = subset(high_betweenness_nodes_noAD.df, high_betweenness == "High betweeness Gene"), aes(label = genes), 
+                                      aes(x = genes, y = betweeness, color = high_betweenness)) +
+  geom_text(data = subset(high_betweenness_nodes_noAD.df, high_betweenness == "High betweeness Gene"), aes(label = external_gene_name), 
             color = 'black', hjust = 1.1, vjust = 0.2, size = 3) +  # Añadir etiquetas solo para los "hub genes"
   geom_point(size = 3) +
   scale_fill_manual(values = c("High betweeness Gene" = "red", "Other" = "blue")) +  # Definir los colores para las categorías
@@ -284,23 +296,12 @@ grid_high_be_genes <- grid.arrange(high_betweenness_nodes_AD.p, high_betweenness
 
 #What genes do both networks share?
 
-shared_high_be_genes <- intersect(high_be_symbol_AD, high_be_symbol_noAD)
+shared_high_be_genes <- intersect(high_betweenness_nodes_AD$external_gene_name, high_betweenness_nodes_noAD$external_gene_name)
 
-# Genes in symbol_AD but not in symbol_noAD
-high_be_genes_en_AD_no_noAD <- setdiff(high_be_symbol_AD, high_be_symbol_noAD)
+# Genes in AD but not in no AD
+high_be_genes_en_AD_no_noAD <- setdiff(high_betweenness_nodes_AD$external_gene_name, high_betweenness_nodes_noAD$external_gene_name)
 
-# Genes in symbol_noAD but not in symbol_AD
-high_be_genes_en_noAD_no_AD <- setdiff(symbol_noAD, symbol_AD)
-
-#In ENSEMBL, # Genes in AD but not in noAD
-
-diff_hub_genes_E <- setdiff(hub_genesAD_list, hub_genes_noAD_list)
-
-#What modules do these genes belong to?
-
-
-
-
+#NEXT QUESTION IS What modules do these genes belong to?
 
 
 #END
