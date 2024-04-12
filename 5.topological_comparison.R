@@ -23,6 +23,10 @@ graphnoAD <- read_graph(file = '/datos/rosmap/graphs/noAD_ROSMAP_RNAseq_MutualIn
 graphLists = list(graphAD = graphAD,
                   graphnoAD = graphnoAD)
 
+#Set seed --- --- 
+
+set.seed(10)
+
 #Network topological comparison --- --- 
 
 #Calculate clustering coefficient of both networks
@@ -57,7 +61,7 @@ degree_dis <- ggplot(degree_distributions, aes(x = degree, fill = dx)) +
        x = "Degree",
        y = "Freq") +
   theme_minimal() +
-  scale_fill_manual(values = c("AD" = "hotpink", "noAD" = "blue4")) +
+  scale_fill_manual(values = c("AD" = "darkblue", "noAD" = "darkgoldenrod")) +
   guides(fill = guide_legend(title = "Diagnosis"))
 
 #ggsave(filename = "~/redesROSMAP/ROSMAP_RNASeq_networks/bothdx_degree_distributions_coexpression_NIAReagan_histogram.png", 
@@ -108,7 +112,14 @@ EdgesJaccard
 
 #Apply modularity algorithm --- ---
 
-infomap_modularity <- sapply(X = graphLists, FUN = cluster_infomap)
+#Mutual information must be taken into account as weights of the edges
+
+infomap_modularity <- list()
+
+for (i in 1:length(graphLists)) {
+  # Aplicar cluster_infomap a cada grafo y almacenar el resultado en results_list
+  infomap_modularity[[i]] <- cluster_infomap(graph = graphLists[[i]], e.weights = graphLists[[i]]$MI)
+}
 
 # Extract information from the modules
 
@@ -119,10 +130,6 @@ membership_modularity <- sapply(X = infomap_modularity, FUN = membership)
 V(graphAD)$modules <- membership_modularity[["graphAD"]]
 
 V(graphnoAD)$modules <- membership_modularity[["graphnoAD"]]
-
-#I only want to plot some modules
-
-modules_to_plot <- names(AD_modules)
 
 # Plot the graph with ggraph and color by module.
 
@@ -149,10 +156,10 @@ ggraph(graphnoAD, layout = 'kk') +
 #relative to the expected proportion if all edges were placed randomly.
 
 modularity_scoreAD <- modularity(graphAD, membership_modularity[["graphAD"]])
-#[1] 0.3491475
+#[1] 0.3620513
 
 modularity_scorenoAD <- modularity(graphnoAD, membership_modularity[["graphnoAD"]])
-#[1] 0.3790371
+#[1] 0.3860467
 
 #Comparison of modular structures between networks --- --- 
 
@@ -186,9 +193,9 @@ graphnoAD_plus <- add_vertices(graphnoAD, nv = length(missing_elements_in_noADno
 
 # Extract information from the modules
 
-graphAD_plus_modu <- cluster_infomap(graphAD_plus)
+graphAD_plus_modu <- cluster_infomap(graphAD_plus, e.weights = graphAD_plus$MI)
 
-graphnoAD_plus_modu <- cluster_infomap(graphnoAD_plus)
+graphnoAD_plus_modu <- cluster_infomap(graphnoAD_plus, e.weights = graphnoAD_plus$MI)
 
 #Modules from plus networks
 
@@ -220,8 +227,8 @@ comparison_methods <- sapply(X = possible_algos, FUN = function(i){
 
 comparison_methods
 
-#vi           nmi    split.join          rand adjusted.rand 
-#3.534727e+00  5.633515e-01  1.339000e+03  8.429085e-01  6.274289e-02 
+#           vi           nmi    split.join          rand adjusted.rand 
+#3.539291e+00  5.624657e-01  1.355000e+03  8.480256e-01  5.993397e-02 
 
 #END
 #Next script is the 5.1functional_comparison_of_modules.R

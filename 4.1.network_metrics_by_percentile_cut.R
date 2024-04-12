@@ -15,7 +15,7 @@ tempus <- Sys.time()
 
 #Get edgelist --- ---
 
-full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_normalizedMI_edgelist.tsv.gz')
+full_edgelist <- vroom::vroom(file = '/datos/rosmap/coexpre_matrix/full_net_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_normalizedMI_edgelist.tsv.gz')
 
 #Declare functions --- ---
 
@@ -141,8 +141,8 @@ graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
 
 #Save in graphml format
 
-#write_graph(graph_to_save, file = '~/redesROSMAP/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
-#  format = "graphml")
+write_graph(graph_to_save, file = '/datos/rosmap/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml',
+  format = "graphml")
 
 #Save edgelist
 
@@ -157,6 +157,6 @@ edgelist_to_save<- edgelist_to_save[-1]
 
 adj_matrix <- as_adjacency_matrix(results_networks[[3]], sparse = FALSE, attr = "MI") %>% as.data.frame()
 
-vroom::vroom_write(adj_matrix, file = '/datos/rosmap/cuts_by_heuristics/AD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_we_adjacency_matrix.tsv')
+vroom::vroom_write(adj_matrix, file = '/datos/rosmap/cuts_by_heuristics/noAD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_we_adjacency_matrix.tsv')
 
 #END

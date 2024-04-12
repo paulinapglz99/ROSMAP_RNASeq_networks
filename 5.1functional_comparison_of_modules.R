@@ -11,7 +11,6 @@
 #2.How similar are the modules found in each network, in terms of the sets of associated biological functions?
 #3.In how many modules is represented each biological process?
 
-
 #paulinapglz.99@gmail.com
 #Part of code adapted from https://github.com/guillermodeandajauregui/BiologicalModuleComparison/blob/master/comparisonParameters.R
 
@@ -19,7 +18,8 @@
 
 pacman::p_load("igraph", 
                "tidyverse",
-               "clusterProfiler")
+               "clusterProfiler", 
+               "gridExtra")
 
 library("org.Hs.eg.db", character.only = TRUE)
 
@@ -33,6 +33,10 @@ graphnoAD <- read_graph(file = '/datos/rosmap/graphs/noAD_ROSMAP_RNAseq_MutualIn
 
 graphLists <- list(graphAD = graphAD,
                   graphnoAD = graphnoAD)
+
+#Set seed for modularity algorithm --- ---
+
+set.seed(10)
 
 #Comparison of biological function sets associated to the overall network --- ---
 
@@ -48,6 +52,18 @@ enrichment_fullnet_AD <- enrichGO(gene = V(graphAD)$name,
          pvalueCutoff = 0.05, 
          qvalueCutoff = 0.10)
 
+#Gene concept network enrichment
+
+enrichment_fullnet_AD_cnet <- cnetplot(enrichment_fullnet_AD, circular = TRUE, colorEdge = TRUE, showCategory= 10)
+
+#Dotplot enrichment
+
+enrichment_fullnet_AD_dot <- dotplot(enrichment_fullnet_AD)
+
+#Save plots
+
+ggsave("enrichment_fullnet_AD_cnet.png", enrichment_fullnet_AD_cnet, width = 15, height = 8)
+
 #For noAD graph
 
 enrichment_fullnet_noAD <- enrichGO(gene = V(graphnoAD)$name,
@@ -57,6 +73,15 @@ enrichment_fullnet_noAD <- enrichGO(gene = V(graphnoAD)$name,
                                   ont = "BP",          #type of GO(Biological Process (BP), cellular Component (CC), Molecular Function (MF)
                                   pvalueCutoff = 0.05, 
                                   qvalueCutoff = 0.10)
+
+#Barplot enrichment
+
+barplot(enrichment_fullnet_noAD)
+
+#Dotplot enrichment
+
+dotplot(enrichment_fullnet_noAD)
+
 
 #Define imilarity of Enriched Processes, Jaccard Index function --- ---
 
