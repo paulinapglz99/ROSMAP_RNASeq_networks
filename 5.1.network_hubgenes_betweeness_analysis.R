@@ -172,7 +172,7 @@ grid_hub_genes <- grid.arrange(hub_genes_AD.p, hub_genes_noAD.p)
 
 #Save plot
 
-ggsave("hub_genes.png", grid_hub_genes, width = 20, height = 10, dpi = 300)
+#ggsave("hub_genes.png", grid_hub_genes, width = 20, height = 10, dpi = 300)
 
 #Analysis of hub genes --- --- 
 
