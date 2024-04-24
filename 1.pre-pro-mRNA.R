@@ -1,8 +1,6 @@
 #
 #Script 1.1prepro-mRNA.R
-#Script for annotation, bias detection and correction (QC) 
-#of already normalized gene expression data
-#Previous script is 1.MatchCountsandClinicalMetadata.R
+#Script for annotation, bias detection and correction (QC) and normalization of RNA-seq data
 #By paulinapglz.99@gmail.com
 
 ####################### PACKAGES ############################## 
@@ -18,12 +16,16 @@ pacman::p_load('dplyr',
 ######################## A. Get the data #####################
 
 #Read counts data
-#This file was generated in 1.MatchFPKMandClinicalMetadata.R
+#This file was generated in 0.
 
-counts <- vroom::vroom(file = '/datos/rosmap/FPKM_data/filtered_FPKM_matrix_250124.csv') %>%   #counts for all cogdx but 6
+counts <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/ROSMAP_RNAseq_rawcounts_DLPFC.txt') %>%
   as.data.frame()
 dim(counts)
-#[1] 55889   625  #original expression counts have 55889 genes and 625 specimenIDs
+#[1] 60606   891
+
+#Delete alignment info from counts
+
+counts <- counts[-c(1:3), ]
 
 colnames(counts)[1] <-"ensembl_gene_id" #change the name for further filtering
 
@@ -55,7 +57,7 @@ dim(myannot)
 #left join to further filtering
 
 counts <- myannot %>% left_join(counts, 
-                                    by = "ensembl_gene_id")
+                                by = "ensembl_gene_id")
 dim(counts)
 #[1] 49399   631
 
@@ -134,10 +136,10 @@ mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 #Create NOISeq object FOR PCA --- ---
 
 noiseqData_PCA <- NOISeq::readData(data = scaled_expression_counts,
-                               factors = factors,           #variables indicating the experimental group for each sample
-                               gc = mygc,                   #%GC in myannot
-                               biotype = mybiotype,         #biotype
-                               length =  mylength)          #gene length
+                                   factors = factors,           #variables indicating the experimental group for each sample
+                                   gc = mygc,                   #%GC in myannot
+                                   biotype = mybiotype,         #biotype
+                                   length =  mylength)          #gene length
 
 #check for batch effect
 
@@ -323,8 +325,8 @@ lFull <- withinLaneNormalization(gcFull,
 #cd Diagnostic test for length and gc correction
 
 mycd_lessbias <- NOISeq::dat(lFull,
-                         type = "cd",
-                         norm = TRUE)
+                             type = "cd",
+                             norm = TRUE)
 #[1] "Reference sample is: 594_120522"
 
 #Table diagnostic
@@ -411,10 +413,10 @@ mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 #Create new noiseq object with re-normalized counts 
 
 noiseqData_final <- NOISeq::readData(exprs(noiseqData_Uqua),
-                             gc = mygc,
-                             biotype = mybiotype,
-                             factors = factors,
-                             length = mylength)
+                                     gc = mygc,
+                                     biotype = mybiotype,
+                                     factors = factors,
+                                     length = mylength)
 
 #Check for bias with renormalized
 
