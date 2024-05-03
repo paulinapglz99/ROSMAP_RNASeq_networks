@@ -1,9 +1,9 @@
 #
-#Script 1.1prepro-mRNA.R
-#Script for annotation, bias detection and correction (QC) and normalization of RNA-seq data
-#By paulinapglz.99@gmail.com
+# 1.1prepro-mRNA.R
+#Script for annotation, bias detection, correction (QC) and normalization of RNA-seq data
+#By paulinapglz.99@gmail.com, adapted from https://github.com/CSB-IG/SGCCA/blob/main/prepro-mRNA.R
 
-####################### PACKAGES ############################## 
+#Libraries --- ---
 
 #Here we use the NOISeq, edgeR and EDAseq packages for bias detection and correction
 
@@ -11,31 +11,23 @@ pacman::p_load('dplyr',
                'biomaRt',
                'NOISeq',
                'edgeR', 
-               'EDASeq')
+               'EDASeq', 
+               "ggplot2")
 
-######################## A. Get the data #####################
+#Get the data --- ---
 
 #Read counts data
 #This file was generated in 0.
 
-counts <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/ROSMAP_RNAseq_rawcounts_DLPFC.txt') %>%
-  as.data.frame()
+counts <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/ROSMAP_RNAseq_filtered_counts_DLPFC.txt') %>% as.data.frame()
 dim(counts)
-#[1] 60606   891
+#[1] 60558   638
 
-#Delete alignment info from counts
+#Annotation with ensembl --- ---
 
-counts <- counts[-c(1:3), ]
+#Generate mart object
 
-colnames(counts)[1] <-"ensembl_gene_id" #change the name for further filtering
-
-############################## B. Annotation ##############################
-
-### Generate annotation with ensembl ------ ------
-#First we generate mart object
-
-mart <- useEnsembl("ensembl",                         
-                   dataset="hsapiens_gene_ensembl")
+mart <- useEnsembl("ensembl", dataset="hsapiens_gene_ensembl")
 
 #We create myannot, with GC content, biotype, info for length & names per transcript
 
@@ -43,64 +35,76 @@ myannot <- getBM(attributes = c("ensembl_gene_id",
                                 "percentage_gene_gc_content", "gene_biotype",
                                 "start_position","end_position","hgnc_symbol"),
                  filters = "ensembl_gene_id", 
-                 values =  counts$ensembl_gene_id,  #annotate the genes in the count matrix 
+                 values =  counts$feature,  #annotate the genes in the count matrix 
                  mart = mart)
 
 #Add length column
 
 myannot$length <- abs(myannot$end_position-myannot$start_position)
 dim(myannot)
-#[1] 49399     7   #The full annotation has 49410 genes, there's a difference between annotated genes and genes in counts
+#[1] 46581     7  
+
+#Explore annotation 
+
+ggplot(myannot, aes(x = gene_biotype, fill = as.factor(gene_biotype))) +
+  geom_bar() +
+  geom_text(stat='count', aes(label=..count..), vjust=-0.5) +  
+  labs(x = "Gene biotype", y = "Freq", title = "Gene biotype distribution ") +
+  theme_minimal() +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
 
 #Filtering   ------ ------
 
 #left join to further filtering
 
-counts <- myannot %>% left_join(counts, 
-                                by = "ensembl_gene_id")
+myannot <- myannot %>% rename(ensembl_gene_id = "feature")
+
+counts <- myannot %>% left_join(counts, by = "feature")
 dim(counts)
-#[1] 49399   631
+#[1] 46581   896
 
 #Filter to obtain only protein coding 
 
 counts <- counts %>% 
   filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
-  distinct(ensembl_gene_id, .keep_all = TRUE) # Keeps only unique rows based on the ensembl_gene_id column
+  distinct(feature, .keep_all = TRUE) # Keeps only unique rows based on the feature column
 dim(counts)
-#[1] 18848   631
+#[1] 6215  897
 
 #Obtain new annotation after filtering
 
 myannot <- counts %>% 
   dplyr::select(1:7)
 dim(myannot)
-#[1] 18848     7
+#[1] 6215    7
 
 #Obtain counts 
 
 expression_counts <- counts %>% 
-  dplyr::select(ensembl_gene_id, 8:ncol(counts))      
+  dplyr::select(feature, 8:ncol(counts))      
 dim(expression_counts)
-#[1] 18848   625
+#[1] 6215  891
+
+############################# PCA  ##############################
 
 #Scale and center data --- --- 
 
 #If your data is not already scaled, scale(scale = T) if you don't need it
 #just center with scale(center = T)
 
-scaled_expression_counts <- scale(expression_counts[-1], scale = T, center = T)  %>% #omited first column as it contains only names
+scaled_expression_counts <- scale(counts[-1], scale = T, center = T)  %>% #omited first column as it contains only names
   as.data.frame()
 
 #This centering and scaling together has the effect of making the column standard 
-#deviations equal to 1. 
+#deviations equal to 1. Necessary for PCA analysis. 
 
 apply(scaled_expression_counts, 2, sd)
 
 #Obtain factors from metadata --- --- 
 
-metadata <- vroom::vroom(file = "/datos/rosmap/metadata/RNA_seq_metadata_080224.csv")
+metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/RNA_seq_metadata_DLPFC.txt")
 dim(metadata)
-#[1] 624   14
+#[1] 1141   41
 
 #I do this to make sure the rowlength of factors match with the counts columns
 
@@ -110,24 +114,26 @@ factors <- data.frame(
 factors <- factors %>% 
   left_join(metadata, by = "specimenID")
 dim(factors)
-#[1] 624   14 # this means 624 specimen_IDs 
+#[1] 890  41
 
-############################## C. NOISeq object ##############################
+factors <- factors %>% dplyr::select(c(specimenID, libraryBatch, sequencingBatch, Study, notes))
 
-#Give format to table for NOIseq purposes ------ ------
+##### C. NOISeq object
 
-gene_names <- myannot$ensembl_gene_id
+#Give format to table for NOIseq purposes --- ---
+
+gene_names <- myannot$feature
 
 rownames(expression_counts) <- gene_names    #for the counts
 rownames(scaled_expression_counts) <- gene_names #for the NOISeq object to PCA
 
 #Names of features characteristics
 
-mylength <- setNames(myannot$length, myannot$ensembl_gene_id)
+mylength <- setNames(myannot$length, myannot$feature)
 
-mygc <- setNames(myannot$percentage_gene_gc_content, myannot$ensembl_gene_id)
+mygc <- setNames(myannot$percentage_gene_gc_content, myannot$feature)
 
-mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
+mybiotype <-setNames(myannot$gene_biotype, myannot$feature)
 
 
 #NOTE: I create here two NOISeq objects, one is only for building a PCA, the other one
@@ -135,7 +141,7 @@ mybiotype <-setNames(myannot$gene_biotype, myannot$ensembl_gene_id)
 
 #Create NOISeq object FOR PCA --- ---
 
-noiseqData_PCA <- NOISeq::readData(data = scaled_expression_counts,
+noiseqData_PCAori <- NOISeq::readData(data = scaled_expression_counts,
                                    factors = factors,           #variables indicating the experimental group for each sample
                                    gc = mygc,                   #%GC in myannot
                                    biotype = mybiotype,         #biotype
@@ -143,23 +149,19 @@ noiseqData_PCA <- NOISeq::readData(data = scaled_expression_counts,
 
 #check for batch effect
 
-myPCA <- dat(noiseqData_PCA, 
+myPCA_ori <- dat(noiseqData_PCA, 
              type = "PCA",   #PCA type of plot
-             norm = T,       #indicating data are already normalized
+             norm = F,       #indicating data are already normalized
              logtransf = T)  #if T, it doesn't perform logtrasnf
 
 #Plot PCA
 #In this PCA, each point is a specimenID, and PCs are explained by gene variance
 
-png("PCA_Ori.png")
+png("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/bias_plots/PCA_Ori.png")
 explo.plot(myPCA,
            plottype = "scores",
            factor = NULL)   #use all factors
 dev.off()
-
-#Save PCA file
-
-#saveRDS(myPCA, "/datos/rosmap/PCAs/PCA_ori_RNAseq_ROSMAP_proteincoding090224.rsd")
 
 #Create NOISeq object bias detect and bias correction --- ---
 
@@ -183,18 +185,17 @@ noiseqData <- NOISeq::readData(data = expression_counts[-1],
 # of the sample is significant, therefore, normalization is needed 
 #"cd" means "Cumulative Distribution."
 
-mycd <- dat(noiseqData, type = "cd", norm = T) #slooooow
+mycd <- dat(noiseqData, type = "cd", norm = T) #slow
 
-#[1] "Warning: 110 features with 0 counts in all samples are to be removed for this analysis."
-#[1] "Reference sample is: 594_120522"
+#[1] "Warning: 187 features with 0 counts in all samples are to be removed for this analysis."
+#[1] "Reference sample is: 01_120405"
 
 #[1] "Diagnostic test: FAILED. Normalization is required to correct this bias."
 
 table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
-# 6    617 
-#Good but not perfect
+#374    515 
 
 #1)check expression bias for counts
 #Use a same factor variable to all bias detection
@@ -240,7 +241,7 @@ myGCcontent <- dat(noiseqData,
 
 png("GCbiasOri.png",width=1000)
 explo.plot(myGCcontent,
-           samples = NULL,   
+           samples = 1:12,   
            toplot = "global")
 dev.off()
 
@@ -269,16 +270,16 @@ dev.off()
 #Filtering those genes with average CPM below 1, would be different
 #to filtering by those with average counts below 1. 
 
-#This function renormalizes and filters features to only have the ones with
+#This function normalizes and filters features to only have the ones with
 #CPM>1
 
 countMatrixFiltered <- filtered.data(expression_counts[-1], 
-                                     factor = "batch",       #using all factors
-                                     norm = T,           #already normalized counts
-                                     depth = NULL,
-                                     method = 1, 
-                                     cpm = 0, 
-                                     p.adj = "fdr")
+                                     factor = factors,       #using all factors
+                                     norm = F,            #counts are not normalized 
+                                     depth = NULL,        #Sequencing depth of samples (column totals before normalizing the data). Depth only needs to be provided when method = 3 and norm = TRUE. 
+                                     method = 1,          #Method 1 (CPM) removes those features that have an average expression per condition less than cpm value and a coefficient of variation per condition higher than cv.cutoff (in percentage) in all the conditions
+                                     cpm = 0,             #Cutoff for the counts per million value to be used in methods 1 and 3. 
+                                     p.adj = "fdr")       #Method for the multiple testing correction
 
 #Filtering out low count features...
 #14951 features are to be kept for differential expression analysis with filtering method 1
@@ -338,6 +339,7 @@ table(mycd_lessbias@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #############################SOLVE BATCH EFFECT#######################################################
 #If your data is already batch solved, only renormalize if last table diagnostic tells you to do it
+
 # Normalization --- ---
 
 #Use Uqua (UpperQuartile) for renormalization
@@ -350,8 +352,8 @@ UquaNorm <-NOISeq::uqua(normCounts(lFull),
 noiseqData_Uqua <- NOISeq::readData(data = UquaNorm, 
                                     factors = factors)
 
-#cd has to preceed ARSyN or won't work
-
+#cd has to preceed ARSyN or it won't work
+ 
 mycd_Uqua <- NOISeq::dat(noiseqData_Uqua,
                          type="cd",
                          norm=TRUE)
@@ -467,7 +469,7 @@ png("lengthbiasFinal.png",width=1000)
 explo.plot(mylenBias, samples = 1:5)
 dev.off()
 
-#Save new count matriz --- ---
+#Save new count matrix --- ---
 
 final_counts <- exprs(noiseqData_final) %>% as.data.frame() %>% 
   mutate(ensembl_gene_id = rownames(exprs(noiseqData_final)), .before = 1) #add it as column so I can save it like tsv

@@ -1,5 +1,5 @@
 #
-#Script 0.Handle_metadata.R
+#Script 0.Handle_data_and_metadata.R
 #This pre-pre-process script reads ROSMAP metadata and FPKM counts data and handle both for further analysis
 #By paulinapglz.99@gmail.com
 
@@ -7,18 +7,20 @@
 
 pacman::p_load("dplyr", 
                "ggplot2", 
-               "gridExtra")
+               "gridExtra", 
+               "ggcorrplot")
 
 #Read metadata --- ---
 
 #This data was directly downloaded from https://www.synapse.org/#!Synapse:syn27000096
 
-metadata <- vroom::vroom(file = '/datos/rosmap/data_by_counts/RNAseq_Harmonization_ROSMAP_combined_metadata.csv')
+metadata <- vroom::vroom(file = '/datos/rosmap/data_by_counts/metadata/RNAseq_Harmonization_ROSMAP_combined_metadata.csv')
 dim(metadata)
 #[1] 3400   38
 
-#merge metadata in one dataset
+#Merge metadata in one dataset
 #Add other dx variants to metadata
+
 #NIA reagan was constructed as https://www.sciencedirect.com/science/article/pii/S0197458097000572?via%3Dihub 2.B.Neuropathological Assessment
 #and https://www.radc.rush.edu/docs/var/detail.htm?category=Pathology&subcategory=Alzheimer%27s+disease&variable=adnc
 
@@ -39,7 +41,6 @@ metadata <- metadata %>%
     cogdx == 1 & (braaksc != 0 & (ceradsc == 1 | ceradsc ==2)) ~ "resilient", 
     TRUE ~ NA_character_ 
       ))
-
 dim(metadata)
 #[1] 2809   41
 
@@ -47,14 +48,13 @@ dim(metadata)
 
 # If i'd like to observe only data per individual I need to delete duplicates, then only for exploration purposes
 
-metadata <- metadata %>% 
-  distinct(individualID, .keep_all = TRUE)
+metadata_ind <- metadata %>% distinct(individualID, .keep_all = TRUE)
 dim(metadata)
 #[1] 1169   41
 
 #Types of brain regions
 
-unique(metadata$tissue)
+unique(metadata_ind$tissue)
 
 #I have data from brain regions
 #[1] "frontal cortex"                 "temporal cortex"                "dorsolateral prefrontal cortex"
@@ -63,7 +63,7 @@ unique(metadata$tissue)
 #Stratification by diagnosis --- ---
 
 #For AD
-AD_metadata <- metadata %>% filter(dicho_NIA_reagan == 1)
+AD_metadata <- metadata_ind %>% filter(dicho_NIA_reagan == 1)
 dim(AD_metadata)
 #[1] 318  41
 
@@ -72,7 +72,7 @@ N_AD <- length(unique(AD_metadata$individualID))
 
 #For no AD
 
-noAD_metadata <- metadata %>% filter(dicho_NIA_reagan == 0)
+noAD_metadata <- metadata_ind %>% filter(dicho_NIA_reagan == 0)
 dim(noAD_metadata)
 #[1] 588  41
 
@@ -81,6 +81,8 @@ N_noAD <- length(unique(noAD_metadata$individualID))
 
 #Distribution of sex
 
+#For AD
+
 AD_sex <- ggplot(AD_metadata, aes(x = as.factor(msex), fill = as.factor(msex))) +
          geom_bar() +
          geom_text(stat='count', aes(label=..count..), vjust=-0.5) +  
@@ -88,19 +90,38 @@ AD_sex <- ggplot(AD_metadata, aes(x = as.factor(msex), fill = as.factor(msex))) 
          title = "For AD pathology patients",
          x = "Sex",
          y = "Count"
-  )
+  ) + 
+  annotate("text", x = Inf, y = Inf, label = paste("Total N =", N_AD), hjust = 1, vjust = 1, size = 4) +  # Agregar el total en una esquina
+  scale_fill_brewer(palette="Set1") +
+  theme_minimal()
 
+#Vis
+
+AD_sex
+
+#For no AD
 
 no_ADsex <-  ggplot(noAD_metadata, aes(x = as.factor(msex), fill = as.factor(msex))) +
   geom_bar() +
   geom_text(stat='count', aes(label=..count..), vjust=-0.5) +  
-  labs(
-    title = "For no AD pathology patients",
+  labs(title = "For no AD pathology patients",
     x = "Sex",
-    y = "Count"
-  )
+    y = "Count") +
+  annotate("text", x = Inf, y = Inf, label = paste("Total N =", N_noAD), hjust = 1, vjust = 1, size = 4) +  # Agregar el total en una esquina
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal()
 
-grid.arrange(AD_sex, no_ADsex, ncol = 2)
+#Vis
+
+no_ADsex
+
+#Grid both graphs
+
+sex_grid <- grid.arrange(AD_sex, no_ADsex, ncol = 2)
+
+#Vis
+
+sex_grid
 
 #Distribution of education
 
@@ -113,8 +134,11 @@ AD_educ <- ggplot(AD_metadata, aes(x = as.factor(educ), fill = as.factor(educ)))
     title = "For AD pathology patients",
     x = "Years of education",
     y = "Count"
-  )
-
+  ) +  
+  annotate("text", x = Inf, y = Inf, label = paste("Total N =", N_AD), hjust = 1, vjust = 1, size = 4) +  # Agregar el total en una esquina
+  theme_minimal()
+  
+#For noAD
 
 noAD_educ <-  ggplot(noAD_metadata, aes(x = as.factor(educ), fill = as.factor(educ))) +
   geom_bar() +
@@ -125,11 +149,15 @@ noAD_educ <-  ggplot(noAD_metadata, aes(x = as.factor(educ), fill = as.factor(ed
     title = "For no AD pathology patients",
     x = "Years of education",
     y = "Count"
-  )
+  ) +
+  annotate("text", x = Inf, y = Inf, label = paste("Total N =", N_noAD), hjust = 1, vjust = 1, size = 4) +  # Agregar el total en una esquina
+  theme_minimal()
 
 grid.arrange(AD_educ, noAD_educ, ncol = 2)
 
 #Race 
+
+#For AD
 
 AD_race <- ggplot(AD_metadata, aes(x = as.factor(race), fill = as.factor(race))) +
   geom_bar() +
@@ -139,9 +167,12 @@ AD_race <- ggplot(AD_metadata, aes(x = as.factor(race), fill = as.factor(race)))
   labs(
     title = "For AD pathology patients",
     x = "Race",
-    y = "Count"
-  )
+    y = "Count") +
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal() +
+  scale_x_discrete(labels = c("White", "African American", "American Indian or Alaska Native"))
 
+#For no AD
 
 noAD_race <-  ggplot(noAD_metadata, aes(x = as.factor(race), fill = as.factor(race))) +
   geom_bar() +
@@ -152,7 +183,11 @@ noAD_race <-  ggplot(noAD_metadata, aes(x = as.factor(race), fill = as.factor(ra
     title = "For no AD pathology patients",
     x = "Years of education",
     y = "Count"
-  )
+  ) + 
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal() +
+  scale_x_discrete(labels = c("White", "African American", "American Indian or Alaska Native"))
+
 
 grid.arrange(AD_race, noAD_race, ncol = 2)
 
@@ -164,8 +199,9 @@ AD_tissue <- ggplot(AD_metadata, aes(x = as.factor(tissue), fill = as.factor(tis
   labs(
     title = "For AD pathology patients",
     x = "Tissue",
-    y = "Count"
-  )
+    y = "Count") +
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal()
 
 noAD_tissue <- ggplot(noAD_metadata, aes(x = as.factor(tissue), fill = as.factor(tissue))) +
   geom_bar() +
@@ -173,25 +209,25 @@ noAD_tissue <- ggplot(noAD_metadata, aes(x = as.factor(tissue), fill = as.factor
   labs(
     title = "For AD pathology patients",
     x = "Tissue",
-    y = "Count"
-  )
+    y = "Count") +
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal()
 
 grid.arrange(AD_tissue, noAD_tissue, ncol = 1)
 
 #Distribution of Age of death
 
-metadata$age_death <- gsub("90\\+", "90", metadata$age_death)
+metadata_ind$age_death <- gsub("90\\+", "90", metadata_ind$age_death)
 
-age_of_death <- ggplot(metadata, aes(x = dicho_NIA_reagan, y = as.numeric(age_death), fill = dicho_NIA_reagan)) +
+ade_death <- ggplot(metadata_ind, aes(x = dicho_NIA_reagan, y = as.numeric(age_death), fill = dicho_NIA_reagan)) +
   geom_violin() +
   theme_minimal() +
-  labs(
-    title = "Age of death",
+  labs(title = "Age of death",
     x = "Dichotomized NIA Reagan",
-    y = "Age of death"
-  )
-age_of_death
-
+    y = "Age of death") +
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal()
+  
 #APOE genotype
 
 AD_APOE <- ggplot(AD_metadata, aes(x = as.factor(apoe_genotype), fill = as.factor(apoe_genotype))) +
@@ -201,8 +237,9 @@ AD_APOE <- ggplot(AD_metadata, aes(x = as.factor(apoe_genotype), fill = as.facto
     labs(
     title = "For AD pathology patients",
     x = "APOE genotype",
-    y = "Count"
-  )
+    y = "Count") +
+    scale_fill_brewer(palette="Set1") +  
+    theme_minimal()
 
 noAD_APOE <-  ggplot(noAD_metadata, aes(x = as.factor(apoe_genotype), fill = as.factor(apoe_genotype))) +
   geom_bar() +
@@ -211,33 +248,38 @@ noAD_APOE <-  ggplot(noAD_metadata, aes(x = as.factor(apoe_genotype), fill = as.
     labs(
     title = "For no AD pathology patients",
     x = "APOE genotype",
-    y = "Count"
-  )
+    y = "Count") +
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal()
 
 grid.arrange(AD_APOE, noAD_APOE, ncol = 1)
 
 #Distribution of post-mortem interval
 
-PMI_interval <- ggplot(metadata, aes(x = dicho_NIA_reagan, y = as.numeric(pmi), fill = dicho_NIA_reagan)) +
+PMI_interval <- ggplot(metadata_ind, aes(x = dicho_NIA_reagan, y = as.numeric(pmi), fill = dicho_NIA_reagan)) +
   geom_boxplot() +
   theme_minimal() +
   labs(
     title = "Post mortem Inverval",
     x = "Dichotomized NIA Reagan",
     y = "Post mortem inverval"
-  )
-PMI_interval
+  ) +
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal()
 
 #RIN
 
-RIN<-ggplot(metadata, aes(x = dicho_NIA_reagan, y = as.numeric(RIN), fill = dicho_NIA_reagan)) +
+RIN <- ggplot(metadata_ind, aes(x = dicho_NIA_reagan, y = as.numeric(RIN), fill = dicho_NIA_reagan)) +
   geom_boxplot() +
   theme_minimal() +
   labs(
     title = "RIN",
     x = "Dichotomized NIA Reagan",
-    y = "RIN"
-  )
+    y = "RIN" 
+  ) + 
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal()
+
 
 RIN
 
@@ -294,10 +336,10 @@ dim(metadata_PCC)
 
 #This data was directly downloaded from https://www.synapse.org/#!Synapse:syn3388564 
 
-counts_one <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_batch1_gene_all_counts_matrix_clean.txt')
-counts_two <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_batch2_gene_all_counts_matrix_clean.txt') 
-counts_three <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_batch3_gene_all_counts_matrix_clean.txt')
-counts_four <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_batch3_gene_all_counts_matrix_clean.txt')
+counts_one <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch1_gene_all_counts_matrix_clean.txt')
+counts_two <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch2_gene_all_counts_matrix_clean.txt') 
+counts_three <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch3_gene_all_counts_matrix_clean.txt')
+counts_four <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch3_gene_all_counts_matrix_clean.txt')
 
 #Merge expression data into one
 
@@ -309,26 +351,25 @@ dim(counts)
 
 #Counts from the frontal cortex
 
-counts_FC <- counts[, (colnames(counts) %in% unique(metadata_FC$specimenID))] %>% 
-  mutate(features = counts[1])
+counts_FC <- counts[, (colnames(counts) %in% metadata_FC$specimenID)] %>% mutate(features = counts[1], .before = 1)
 dim(counts_FC)
-#[1] 60607     0
+#[1] 60607     1
 
 #Counts from the temporal cortex
 
 counts_TC <- counts[, (colnames(counts) %in% metadata_TC$specimenID)] %>% 
   mutate(counts[1], .before = 1)
 dim(counts_TC)
-#[1] 60607     0
+#[1] 60607     1
 
 #Counts for Dorsoral Prefrontal Cortex
-counts_DLPFC <- counts[, (colnames(counts) %in% metadata_DLPFC$specimenID)] %>% 
+counts_DLPFC <- counts[, (colnames(counts) %in% unique(metadata_DLPFC$specimenID))] %>% 
   mutate(counts[1], .before = 1)
 dim(counts_DLPFC)
-#[1] 60607   890
+#[1] 60607   891
 
 #Counts for  Head of caudate nucleus 
-counts_HCN <- counts[, (colnames(counts) %in% metadata_HCN$specimenID)] %>% 
+counts_HCN <- counts[, (colnames(counts) %in% unique(metadata_HCN$specimenID))] %>% 
   mutate(counts[1], .before = 1)
 dim(counts_HCN)
 #[1] 60606   749
@@ -339,18 +380,43 @@ counts_PCC <- counts[, c(colnames(counts) %in% metadata_PCC$specimenID)]  %>%
 dim(counts_PCC)
 #[1] 60606   573
 
+#Mapping counts
+
+mapping_counts <- data.frame(
+  Region = c("DLPFC", "HCN", "PCC"),
+  samples = c(dim(counts_DLPFC)[2], dim(counts_HCN)[2], dim(counts_PCC)[2]), 
+  features = c(dim(counts_DLPFC)[1], dim(counts_HCN)[1], dim(counts_PCC)[1])
+)
+
+#Plot
+
+mapping_counts.p <- ggplot(mapping_counts, aes(x = Region, y = samples, fill = Region)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = samples), vjust = -0.5, size = 3.5) + # Añadir números encima de las barras
+  labs(
+    title = "Number of specimens sequenced",
+    x = "Brain region",
+    y = "SpecimenID sequenced") +
+  annotate("text", x = Inf, y = Inf, label = paste("Total features = 60,607"), hjust = 1, vjust = 1, size = 4) +
+  scale_fill_brewer(palette="Set1") +  
+  theme_minimal()
+
+#Vis
+
+mapping_counts.p
+
 #Save count data ---- ---
 
 #Counts for Dorsoral Prefrontal Cortex
 
-#vroom::vroom_write(counts_DLPFC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/ROSMAP_RNAseq_rawcounts_DLPFC.txt")
+#vroom::vroom_write(counts_DLPFC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLPFC/ROSMAP_RNAseq_rawcounts_DLPFC.txt")
 
 #Counts for  Head of caudate nucleus 
 
-#vroom::vroom_write(counts_HCN, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/ROSMAP_RNAseq_rawcounts_HCN.txt")
+#vroom::vroom_write(counts_HCN, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/HCN/ROSMAP_RNAseq_rawcounts_HCN.txt")
 
 #Counts for posterior cingulate cortex
 
-#vroom::vroom_write(counts_PCC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/ROSMAP_RNAseq_rawcounts_PCC.txt")
+#vroom::vroom_write(counts_PCC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/PCC/ROSMAP_RNAseq_rawcounts_PCC.txt")
 
 #END
