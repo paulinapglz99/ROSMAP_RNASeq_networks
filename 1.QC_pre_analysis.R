@@ -1,22 +1,17 @@
 #
 #1.QC_pre_analysis.R
-#Script to build a PCA with RNA-seq data counts 
+#Script to inspect and pre-process RNA-seq data counts 
 #paulinapglz.99@gmail.com
 
 #I used the reference to build a PCA https://cran.r-project.org/web/packages/LearnPCA/vignettes/Vig_03_Step_By_Step_PCA.pdf
-
-#The steps to carry out PCA are:
-#1. Center the data
-#2. Scale the data
-#3. Carry out data reduction
-#4.Plot! (Scree, PCA, etc.)
 
 ###Libraries --- ---
 
 pacman::p_load("tidyverse", 
                "ggplot2", 
                "ggfortify", 
-               "gridExtra")
+               "gridExtra", 
+               "edgeR")
 
 #Get data --- --- 
 
@@ -27,7 +22,7 @@ dim(counts)
 
 #Obtain factors from metadata
 
-metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/RNA_seq_metadata_DLPFC.txt")
+metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_DLPFC.txt")
 dim(metadata)
 #[1] 1141   41
 
@@ -57,7 +52,7 @@ dim(sub_metadata)
 
 sub_counts <- counts %>% select(c(1, any_of(sub_metadata$specimenID)))
 dim(sub_counts)
-#[1] 60558   637
+#[1] 60558   638
 
 #PCA --- ---
 
@@ -124,8 +119,6 @@ autoplot(pca, label = TRUE)
 #Option 2: use ggplot 
 
 #Colour by library batch --- ---
-
-#By library batch
 
 #Plot PC1 and PC2
 
@@ -197,7 +190,6 @@ PC1_PC3_seq_batch <- pca_df %>%
 #Plot PC2 and PC3
 
 PC2_PC3_seq_batch <- pca_df %>% 
-  # filter(PC2>-100000 & PC3 < 100000) %>%  #trampeando
   ggplot() +
   aes(x = PC2, y = PC3, colour = as.factor(sub_metadata$sequencingBatch)) +
   geom_point() +
@@ -249,7 +241,7 @@ PC2_PC3_study_batch<- pca_df %>%
        y = paste("PC3 (",  sprintf("%.2f", variance_table$Variance_Percentage[3]), "%)")) +
   theme_minimal()
 
-# By library prep --- ---
+# By cognitive diagnosis --- ---
 
 PC1_PC2_study_batch <- pca_df %>% 
   ggplot() +
@@ -276,15 +268,15 @@ ggsave("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/bias_p
 ggsave("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/bias_plots/PC1_PC3_batches.png", PC1_PC3, height = 25,  dpi = 300)
 ggsave("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/bias_plots/PC2_PC3_batches.png", PC2_PC3, height = 25,  dpi = 300)
 
-#Loading plot --- ---
+#Loading plot for PC1 --- ---
 
-# Create a dataframe with the variable names and load values for PC1
+# Create a data frame with the variable names and load values for PC1
 
 loading_data_PC1 <- data.frame(feature = names(pca$rotation[, 1]),
                                PC1_Loadings = pca$rotation[, 1]) %>% 
                                mutate(loadings_Percentage = PC1_Loadings^2 / sum(PC1_Loadings^2) * 100, 
                                cumulative_percentages = cumsum(PC1_Loadings^2 / sum(PC1_Loadings^2) * 100)) %>%
-  arrange(desc(loadings_Percentage))
+                      arrange(desc(loadings_Percentage))
 
 loading_data_PC1 <- arrange(loading_data_PC1, PC1_Loadings)
 
@@ -292,20 +284,10 @@ loading_data_PC1 <- arrange(loading_data_PC1, PC1_Loadings)
 min(loading_data_PC1$PC1_Loadings)
 which.min(loading_data_PC1$PC1_Loadings)
 
-#Plot contribution for PC1
+#Plot contribution for PC1 --- ---
 
 #Option 1: by barplot
 barplot(pca$rotation[,1])
-
-#Option 2: ggplot2, slooow
-
-ggplot(loading_data_PC1, aes(x = feature , y = loadings_Percentage)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = round(loadings_Percentage, 2)), vjust = -0.5, size = 3.5) +
-  labs(title = "PC1 Loading plot",
-    x = "Features",
-    y = "Loadings percentage") +
-  theme_minimal()
 
 ################################################################################
 
@@ -336,22 +318,120 @@ ggplot(loading_data_PC1, aes(x = feature , y = loadings_Percentage)) +
 
 #autoplot(pca_depleted, label = TRUE)
 
-#TMM normalization --- ---
+################################################################################
+
+#Normalization for QC analysis --- ---
+
+## Filtering out lowly expressed genes
+
+rownames(sub_counts) <- sub_counts$feature
+
+mycpm <- cpm(sub_counts[-1])
+
+rownames(mycpm) <- sub_counts$feature
+
+#Plot cpm vs counts
+
+plot(sub_counts[,2],mycpm[,1],xlim=c(0,20),ylim=c(0,0.5))
+abline(v=10,col=2)
+abline(h=0.15,col=4)
+
+thresh <- mycpm > 0.15
+keep <- rowSums(thresh) >= 3
+table(keep)
+
+counts.keep <- sub_counts[keep,]
+dim(counts.keep)
+#[1] 33524   638
+
+## Convert to DGEList object
+y <- DGEList(counts.keep)
+
+#     ____              ___ __                            __             __
+#    / __ \__  ______ _/ (_) /___  __   _________  ____  / /__________  / /
+#   / / / / / / / __ `/ / / __/ / / /  / ___/ __ \/ __ \/ __/ ___/ __ \/ / 
+#  / /_/ / /_/ / /_/ / / / /_/ /_/ /  / /__/ /_/ / / / / /_/ /  / /_/ / /  
+#  \___\_\__,_/\__,_/_/_/\__/\__, /   \___/\____/_/ /_/\__/_/   \____/_/   
+#                           /____/                                         
+
+## Library sizes
+barplot(y$samples$lib.size)
+
+## Distribution of counts
 
 # Get log2 counts per million
 logcpm <- cpm(y$counts,log=TRUE)
+dim(logcpm)
+#[1] 33524   637
+
+logcpm <- as.data.frame(logcpm)
+
+rownames(logcpm) <- counts.keep$feature
+
+pca_matrix_logcpm <- logcpm %>% 
+ # column_to_rownames("feature") %>% 
+  as.matrix() %>% 
+  t()  # transpose the matrix so that rows = samples and columns = variables, this because dots in the PCA scatterplot will be the ones in the rows
+
+
+#Metadata for logcpm
+filtered_sub_metadata <- sub_metadata %>%
+  filter(specimenID %in% rownames(pca_matrix_logcpm))
+dim(filtered_sub_metadata)
+#[1] 637  41
+
+#PCA for logcpm
+
+PCA_cpm_log2 <- prcomp(pca_matrix_logcpm)
+
+autoplot(PCA_cpm_log2)
+
+PCA_cpm_log2_df <- PCA_cpm_log2$x %>% as.data.frame() %>% rownames_to_column(var = 'specimenID')
+
+#Variance table
+
+variance_table_logcpm <- data.frame(
+  PC = 1:length(PCA_cpm_log2$sdev),
+  Variance_Percentage = PCA_cpm_log2$sdev^2 / sum(PCA_cpm_log2$sdev^2) * 100,
+  cumulative_percentage = cumsum(PCA_cpm_log2$sdev^2 / sum(PCA_cpm_log2$sdev^2) * 100))
+
+#Plot by color
+ 
+PC1_PC2_logcpm_librarybatch <- PCA_cpm_log2_df %>% 
+  ggplot() +
+  aes(x = PC1, y = PC2, colour = as.factor(filtered_sub_metadata$libraryBatch)) +
+  geom_point() +
+  geom_text(mapping = aes(label = specimenID)) +
+  labs(title = "PCA Scatterplot coloured by study batch",
+       subtitle = "PC1 vs PC2", 
+       x = paste("PC1 (", sprintf("%.2f", variance_table_logcpm$Variance_Percentage[1]), "%)"),
+       y = paste("PC2 (",  sprintf("%.2f", variance_table_logcpm$Variance_Percentage[3]), "%)")) +
+  theme_minimal()
+
+#
+
+PC1_PC2_logcpm_seqbatch <- PCA_cpm_log2_df %>% 
+  ggplot() +
+    aes(x = PC1, y = PC2, colour = as.factor(filtered_sub_metadata$sequencingBatch)) +
+  geom_point() +
+  geom_text(mapping = aes(label = specimenID)) +
+  labs(title = "PCA Scatterplot coloured by seq batch",
+       subtitle = "PC1 vs PC2", 
+       x = paste("PC1 (", sprintf("%.2f", variance_table_logcpm$Variance_Percentage[1]), "%)"),
+       y = paste("PC2 (",  sprintf("%.2f", variance_table_logcpm$Variance_Percentage[3]), "%)")) +
+  theme_minimal()
+
+
 # Check distributions of samples using boxplots
-group.col <- rep(c("red","blue"), each = 20)
+group.col <- rep(c("red","blue"), each = length(colnames(logcpm)))
 boxplot(logcpm, xlab="", ylab="Log2 counts per million",las=2,col=group.col,
         pars=list(cex.lab=0.8,cex.axis=0.8))
 abline(h=median(logcpm),col="blue")
 title("Boxplots of logCPMs\n(unnormalised, coloured by groups)",cex.main=0.8)
 
 # MDS plots
-plotMDS(y,col=group.col)
+plotMDS(y, col=group.col)
 legend("topright", legend = levels(as.factor(targets$Group)), fill=c("red","blue"))
-
-#Finally, save data and metadata 
 
 #Save metadata
 
