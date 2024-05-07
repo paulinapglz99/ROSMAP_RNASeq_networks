@@ -324,19 +324,17 @@ barplot(pca$rotation[,1])
 
 ## Filtering out lowly expressed genes
 
-rownames(sub_counts) <- sub_counts$feature
-
 mycpm <- cpm(sub_counts[-1])
 
 rownames(mycpm) <- sub_counts$feature
 
 #Plot cpm vs counts
 
-plot(sub_counts[,2],mycpm[,1],xlim=c(0,20),ylim=c(0,0.5))
+plot(sub_counts[[2]],mycpm[,1],xlim=c(0,20),ylim=c(0,0.5))
 abline(v=10,col=2)
-abline(h=0.15,col=4)
+abline(h=0.32,col=4)
 
-thresh <- mycpm > 0.15
+thresh <- mycpm > 0.32
 keep <- rowSums(thresh) >= 3
 table(keep)
 
@@ -402,7 +400,7 @@ PC1_PC2_logcpm_librarybatch <- PCA_cpm_log2_df %>%
   aes(x = PC1, y = PC2, colour = as.factor(filtered_sub_metadata$libraryBatch)) +
   geom_point() +
   geom_text(mapping = aes(label = specimenID)) +
-  labs(title = "PCA Scatterplot coloured by study batch",
+  labs(title = "PCA Scatterplot coloured by library batch",
        subtitle = "PC1 vs PC2", 
        x = paste("PC1 (", sprintf("%.2f", variance_table_logcpm$Variance_Percentage[1]), "%)"),
        y = paste("PC2 (",  sprintf("%.2f", variance_table_logcpm$Variance_Percentage[3]), "%)")) +
@@ -427,15 +425,15 @@ group.col <- rep(c("red","blue"), each = length(colnames(logcpm)))
 boxplot(logcpm, xlab="", ylab="Log2 counts per million",las=2,col=group.col,
         pars=list(cex.lab=0.8,cex.axis=0.8))
 abline(h=median(logcpm),col="blue")
-title("Boxplots of logCPMs\n(unnormalised, coloured by groups)",cex.main=0.8)
+title("Boxplots of logCPMs\n(unnormalised)",cex.main=0.8)
 
 # MDS plots
-plotMDS(y, col=group.col)
+plotMDS(y, col=group.col) #slow but works
 legend("topright", legend = levels(as.factor(targets$Group)), fill=c("red","blue"))
 
 #Save metadata
 
-#vroom::vroom_write(sub_metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/RNA_seq_metadata_filtered_DLPFC.txt")
+#vroom::vroom_write(filtered_sub_metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/RNA_seq_metadata_filtered_DLPFC.txt")
 
 #Save counts
 
