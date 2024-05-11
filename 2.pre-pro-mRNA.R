@@ -25,7 +25,7 @@ dim(counts)
 
 #Filtering   ------ ------
 
-#left join to further filtering
+#Do this if you want only protein coding
 
 #counts <- myannot %>% left_join(counts, by = "feature")
 #dim(counts)
@@ -53,46 +53,33 @@ dim(counts)
 #dim(expression_counts)
 #[1] 6215  891
 
-############################## PCA  ##############################
-
-#Scale and center data --- --- 
-
-#If your data is not already scaled, scale(scale = T) if you don't need it
-#just center with scale(center = T)
-
-#scaled_expression_counts <- scale(counts[-1], scale = T, center = T)  %>% #omited first column as it contains only names
-#  as.data.frame()
-
-#This centering and scaling together has the effect of making the column standard 
-#deviations equal to 1. Necessary for PCA analysis. 
-
-#apply(scaled_expression_counts, 2, sd)
-
 #Obtain factors from metadata --- --- 
 
-metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/RNA_seq_metadata_filtered_DLPFC.txt")
+metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filtered_DLPFC.txt")
 dim(metadata)
-#[1] 637   41
+#[1] 637  41
 
 #I do this to make sure the rowlength of factors match with the counts columns, it is like metadata filtering
 
-factors <- data.frame(
-  "specimenID" = colnames(counts)[-1])   
+factors <- data.frame("specimenID" = colnames(counts)[-1])   
 
-factors <- factors %>% 
-  left_join(metadata, by = "specimenID")
+#Left join with metadata
 
-factors <- factors %>% dplyr::select(c(specimenID, libraryBatch, NIA_reagan_ADLikelihood, dicho_NIA_reagan))
+factors <- factors %>% left_join(metadata, by = "specimenID")
+
+factors <- factors %>% dplyr::select(c(specimenID, libraryBatch, RIN , NIA_reagan_ADLikelihood, dicho_NIA_reagan, cogdx))
 
 factors <- factors %>% filter(!is.na(NIA_reagan_ADLikelihood))
 dim(factors)
 #[1] 446  4
+#[1] 499   6 <- 
 
 #Filter again counts
 
 counts <- counts %>% dplyr::select(1,intersect(colnames(counts), factors$specimenID))
 dim(counts)
 #[1] 60558   447
+#[1] 60558   500 <- 
 
 #Set names to rows 
 
@@ -123,7 +110,7 @@ myannot$length <- abs(myannot$end_position-myannot$start_position)
 dim(myannot)
 #[1] 60229     7
 
-#Explore annotation 
+#Explore pre-annotation 
 
 ggplot(myannot, aes(x = gene_biotype, fill = as.factor(gene_biotype))) +
   geom_bar() +
@@ -223,6 +210,9 @@ table(mycd@dat$DiagnosticTest[,  "Diagnostic Test"])
 #FAILED PASSED 
 #  438      7 
 
+#FAILED PASSED 
+#491      7 
+
 #1)check expression bias for counts
 #Use a same factor variable to all bias detection
 
@@ -291,7 +281,7 @@ dev.off()
 
 #Display full QC report, don't run if not necessary
 
-QCreport(noiseqData, samples = NULL, factor = NULL, norm = FALSE)
+#QCreport(noiseqData, samples = NULL, factor = NULL, norm = FALSE)
 
 #################SOLVE BIASES###################################
 
@@ -300,9 +290,20 @@ QCreport(noiseqData, samples = NULL, factor = NULL, norm = FALSE)
 #Filtering those genes with average CPM below 1, would be different
 #to filtering by those with average counts below 1. 
 
+#Hos do I know how to filter?
+
+mycpm <- cpm(counts[-1])
+
+#Plot cpm vs counts
+#You will know where to cut according to the horizontal line, which must be orthogonal 
+#to the horizontal line and coincide with the center point. 
+
+plot(counts[[2]],mycpm[,1],xlim=c(0,20),ylim=c(0,0.5))
+abline(v=10,col=2) #v hardcoded
+abline(h=0.32,col=4)#h hardcoded
+
 #This function normalizes and filters features to only have the ones with
 #CPM>0.32
-#Why 0.32? 
 #Plotted cpm_counts vs counts and 0.32 is the intersection, this may change
 
 countMatrixFiltered <- filtered.data(counts[-1], 
@@ -314,25 +315,32 @@ countMatrixFiltered <- filtered.data(counts[-1],
                                      p.adj = "fdr")       #Method for the multiple testing correction
 dim(countMatrixFiltered)
 #[1] 22217   446
+#[1] 22191   499? <-
 
 #Filtering out low count features...
 #22225 features are to be kept for differential expression analysis with filtering method 1
+
+#Filtering out low count features...
+#22191 features are to be kept for differential expression analysis with filtering method 1 <- 
 
 #Create new annotation with filtered matrix
 
 myannot <- myannot %>% filter(feature %in% rownames(countMatrixFiltered))
 dim(myannot)
 #[1] 22095     7
+#[1] 22071     7? <- 
 
 myannot <- myannot[!duplicated(myannot$feature), ]
 dim(myannot)
 #[1] 22094     7  1 duplicated feature was deleted
+#[1] 22070     7? <- 
 
 #Not all genes are annotated in the matrix
 
 countMatrixFiltered <- countMatrixFiltered[rownames(countMatrixFiltered) %in% myannot$feature,]
 dim(countMatrixFiltered)
 #[1] 22094   446
+#[1] 22070   499? <- 
 
 #Feature data
 
@@ -341,6 +349,7 @@ rownames(featureData) <- featureData$feature
 
 dim(featureData)
 #[1] 22094     7
+#[1] 22070     7? <- 
 
 #Pheno data
 
@@ -350,6 +359,7 @@ rownames(phenoData) <- phenoData$specimenID
 
 dim(phenoData)
 #[1] 446   4
+#[1] 499   6 <-
 
 ##Create EDA object --- --
 
@@ -387,8 +397,9 @@ table(mycd_lessbias@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
 #   439      6   
+#   493      5 ? <- 
 
-#############################SOLVE BATCH EFFECT#######################################################
+#Solve batch effect --- --- 
 
 #If your data is already batch solved, only renormalize if last table diagnostic tells you to do it
 
@@ -417,6 +428,7 @@ table(mycd_norm@dat$DiagnosticTest[,  "Diagnostic Test"])
 
 #FAILED PASSED 
 #  76    369  
+#    88    410? <-
 
 #ARSyNseq for batch effect solution --- ---
 
@@ -480,7 +492,7 @@ pca_norm_ARSyn_df <- pca_norm_ARSyn$x %>% as.data.frame() %>% rownames_to_column
 #Note: The percentage of variance is calculated as the squared singular value
 #of each PC divided by the sum of squared singular values, multiplied by 100.
 
-variance_table <- data.frame(
+variance_table_norm_ARSyn <- data.frame(
   PC = 1:length(pca_norm_ARSyn$sdev),
   Variance_Percentage = pca_norm_ARSyn$sdev^2 / sum(pca_norm_ARSyn$sdev^2) * 100,
   cumulative_percentage = cumsum(pca_norm_ARSyn$sdev^2 / sum(pca_norm_ARSyn$sdev^2) * 100))
@@ -494,8 +506,8 @@ PC1_PC2_norm_ARSyn_library_batch <- pca_norm_ARSyn_df %>%
   geom_text(mapping = aes(label = specimenID)) +
   labs(title = "PCA Scatterplot coloured by library batch",
        subtitle = "PC1 vs PC2", 
-       x = paste("PC1 (", sprintf("%.2f", variance_table$Variance_Percentage[1]), "%)"),
-       y = paste("PC2 (",  sprintf("%.2f", variance_table$Variance_Percentage[3]), "%)")) +
+       x = paste("PC1 (", sprintf("%.2f", variance_table_norm_ARSyn$Variance_Percentage[1]), "%)"),
+       y = paste("PC2 (",  sprintf("%.2f", variance_table_norm_ARSyn$Variance_Percentage[3]), "%)")) +
   theme_minimal()
 
 PC1_PC2_norm_ARSyn_NIA <- pca_norm_ARSyn_df %>% 
@@ -505,8 +517,8 @@ PC1_PC2_norm_ARSyn_NIA <- pca_norm_ARSyn_df %>%
   geom_text(mapping = aes(label = specimenID)) +
   labs(title = "PCA Scatterplot coloured by library batch",
        subtitle = "PC1 vs PC2", 
-       x = paste("PC1 (", sprintf("%.2f", variance_table$Variance_Percentage[1]), "%)"),
-       y = paste("PC2 (",  sprintf("%.2f", variance_table$Variance_Percentage[3]), "%)")) +
+       x = paste("PC1 (", sprintf("%.2f", variance_table_norm_ARSyn$Variance_Percentage[1]), "%)"),
+       y = paste("PC2 (",  sprintf("%.2f", variance_table_norm_ARSyn$Variance_Percentage[3]), "%)")) +
   theme_minimal()
 
 #Names of features characteristics to add to final data
@@ -558,7 +570,7 @@ dev.off()
 myGCcontent_final <- dat(noiseqData_final,
                          k = 0, 
                          type = "GCbias", 
-                         factor = "libraryBatch",
+                         factor = NULL,
                          norm = T)
 
 #Plot final GC bias
@@ -588,11 +600,12 @@ dev.off()
 norm_ARSyn_depl <- norm_ARSyn[, !(colnames(norm_ARSyn) %in% c("792_130530", "15_120410"))]
 dim(norm_ARSyn)
 # Pre - [1] 22094   446
-# Post - 
+# Post - [1] 22070   499 <-
 
 factors_depleted <- factors %>% filter(specimenID != "792_130530" & specimenID != "15_120410")
 dim(factors_depleted)
 #[1] 444   4
+#[1] 497   6 <-
 
 #Build matrix
 
@@ -629,8 +642,8 @@ PC1_PC2_norm_ARSyn_depl_library_batch <- pca_norm_ARSyn_depl_df %>%
   geom_text(mapping = aes(label = specimenID)) +
   labs(title = "PCA Scatterplot coloured by library batch",
        subtitle = "PC1 vs PC2", 
-       x = paste("PC1 (", sprintf("%.2f", variance_table$Variance_Percentage[1]), "%)"),
-       y = paste("PC2 (",  sprintf("%.2f", variance_table$Variance_Percentage[3]), "%)")) +
+       x = paste("PC1 (", sprintf("%.2f", variance_table_depl$Variance_Percentage[1]), "%)"),
+       y = paste("PC2 (",  sprintf("%.2f", variance_table_depl$Variance_Percentage[3]), "%)")) +
   theme_minimal()
 
 
@@ -639,25 +652,44 @@ PC1_PC2_norm_ARSyn_depl_library_batch <- pca_norm_ARSyn_depl_df %>%
 final_counts <- norm_ARSyn_depl %>% as.data.frame() %>%  mutate(feature = rownames(norm_ARSyn), .before = 1) #add it as column so I can save it like tsv
 dim(final_counts)
 #[1] 22094   445  #This means 447 specimenIDs with 22094 features
+#[1] 22070   498? <-
 
 #Final metadata --- ---
 
 final_metadata <- data.frame(
   "specimenID" = colnames(final_counts)[-1])   
 
-final_metadata <- metadata %>% 
+final_metadata <- final_metadata %>% 
   left_join(metadata, by = "specimenID")
 dim(final_metadata)
 #[1] 446  81
+#[1] 497  81 <-
+
+#Final annotation --- --- 
+
+final_annot <- getBM(attributes = c("ensembl_gene_id", 
+                                "percentage_gene_gc_content", "gene_biotype",
+                                "start_position","end_position","hgnc_symbol"),
+                 filters = "ensembl_gene_id", 
+                 values =  final_counts$feature,  #annotate the genes in the count matrix 
+                 mart = mart)
+
+#Add length column
+
+final_annot$length <- abs(final_annot$end_position-final_annot$start_position)
+dim(final_annot)
+#[1] 22071     7
 
 #Finally, save table --- ---
 
 vroom::vroom_write(final_counts, file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/ROSMAP_RNAseq_filtered_counts_DLPFC.txt")
 
-#Save final meta
-
 #Save filtered metadata --- ---
 
-vroom::vroom_write(final_metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/RNA_seq_metadata_filtered_DLPFC.txt")
+vroom::vroom_write(final_metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filtered_DLPFC.txt")
+
+#Save annotation --- --- 
+
+vroom::vroom_write(final_annot, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_filtered_annotation_DLPFC.txt")
 
 #END

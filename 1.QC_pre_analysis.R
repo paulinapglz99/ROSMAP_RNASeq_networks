@@ -18,13 +18,12 @@ pacman::p_load("tidyverse",
 counts <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/ROSMAP_RNAseq_rawcounts_DLPFC.txt")
 dim(counts)
 #[1] 60606   891 for DLFPC
-#[1] 60606   750 for
 
 #Obtain factors from metadata
 
 metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_DLPFC.txt")
 dim(metadata)
-#[1] 1141   41
+#[1] 1141   41 for DLFPC
 
 #Data handling --- ---
 
@@ -50,7 +49,7 @@ sub_metadata <- metadata %>% filter(!is.na(libraryBatch))
 dim(sub_metadata)
 #[1] 637  41
 
-sub_counts <- counts %>% select(c(1, any_of(sub_metadata$specimenID)))
+sub_counts <- counts %>% dplyr::select(c(1, any_of(sub_metadata$specimenID)))
 dim(sub_counts)
 #[1] 60558   638
 
@@ -68,7 +67,7 @@ pca_matrix[1:10, 1:10]
 
 # Perform the PCA
 
-pca <- prcomp(pca_matrix, retx = TRUE, center = TRUE, scale. = FALSE)
+pca <- prcomp(pca_matrix, retx = TRUE, center = TRUE, scale. = FALSE) #slow
 
 #PCA to table
 
@@ -327,6 +326,8 @@ barplot(pca$rotation[,1])
 mycpm <- cpm(sub_counts[-1])
 
 rownames(mycpm) <- sub_counts$feature
+dim(mycpm)
+#[1] 60558   637
 
 #Plot cpm vs counts
 
@@ -338,19 +339,18 @@ thresh <- mycpm > 0.32
 keep <- rowSums(thresh) >= 3
 table(keep)
 
+#FALSE  TRUE 
+#32426 28132 
+
 counts.keep <- sub_counts[keep,]
 dim(counts.keep)
 #[1] 33524   638
+#[1] 28132   638???
+
+#counts.keep[1:5, 1:5]
 
 ## Convert to DGEList object
 y <- DGEList(counts.keep)
-
-#     ____              ___ __                            __             __
-#    / __ \__  ______ _/ (_) /___  __   _________  ____  / /__________  / /
-#   / / / / / / / __ `/ / / __/ / / /  / ___/ __ \/ __ \/ __/ ___/ __ \/ / 
-#  / /_/ / /_/ / /_/ / / / /_/ /_/ /  / /__/ /_/ / / / / /_/ /  / /_/ / /  
-#  \___\_\__,_/\__,_/_/_/\__/\__, /   \___/\____/_/ /_/\__/_/   \____/_/   
-#                           /____/                                         
 
 ## Library sizes
 barplot(y$samples$lib.size)
@@ -367,16 +367,8 @@ logcpm <- as.data.frame(logcpm)
 rownames(logcpm) <- counts.keep$feature
 
 pca_matrix_logcpm <- logcpm %>% 
- # column_to_rownames("feature") %>% 
   as.matrix() %>% 
   t()  # transpose the matrix so that rows = samples and columns = variables, this because dots in the PCA scatterplot will be the ones in the rows
-
-
-#Metadata for logcpm
-filtered_sub_metadata <- sub_metadata %>%
-  filter(specimenID %in% rownames(pca_matrix_logcpm))
-dim(filtered_sub_metadata)
-#[1] 637  41
 
 #PCA for logcpm
 
@@ -433,7 +425,7 @@ legend("topright", legend = levels(as.factor(targets$Group)), fill=c("red","blue
 
 #Save metadata
 
-#vroom::vroom_write(filtered_sub_metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/RNA_seq_metadata_filtered_DLPFC.txt")
+#vroom::vroom_write(metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filtered_DLPFC.txt")
 
 #Save counts
 
