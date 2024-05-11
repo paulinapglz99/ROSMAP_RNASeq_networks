@@ -361,6 +361,7 @@ barplot(y$samples$lib.size)
 logcpm <- cpm(y$counts,log=TRUE)
 dim(logcpm)
 #[1] 33524   637
+#[1] 28132   637 <- 
 
 logcpm <- as.data.frame(logcpm)
 
@@ -425,7 +426,7 @@ legend("topright", legend = levels(as.factor(targets$Group)), fill=c("red","blue
 
 #Save metadata
 
-#vroom::vroom_write(metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filtered_DLPFC.txt")
+#vroom::vroom_write(sub_metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filtered_DLPFC.txt")
 
 #Save counts
 

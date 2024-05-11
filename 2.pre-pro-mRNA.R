@@ -23,36 +23,6 @@ counts <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts
 dim(counts)
 #[1] 60558   638
 
-#Filtering   ------ ------
-
-#Do this if you want only protein coding
-
-#counts <- myannot %>% left_join(counts, by = "feature")
-#dim(counts)
-#[1] 46581   896
-
-#Filter to obtain only protein coding 
-
-#counts <- counts %>% 
-#  filter(gene_biotype == "protein_coding" & hgnc_symbol!="") %>% #only rows where gene_biotype is "protein_coding" and hgnc_symbol is not an empty string 
-#  distinct(feature, .keep_all = TRUE) # Keeps only unique rows based on the feature column
-#dim(counts)
-#[1] 6215  897
-
-#Obtain new annotation after filtering
-
-#myannot <- counts %>% 
-#  dplyr::select(1:7)
-#dim(myannot)
-#[1] 6215    7
-
-#Obtain counts 
-
-#expression_counts <- counts %>% 
-#  dplyr::select(feature, 8:ncol(counts))      
-#dim(expression_counts)
-#[1] 6215  891
-
 #Obtain factors from metadata --- --- 
 
 metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filtered_DLPFC.txt")
@@ -163,8 +133,6 @@ ggplot(myannot, aes(x = gene_biotype, fill = as.factor(gene_biotype))) +
 #           plottype = "scores",
 #           factor = NULL)   #use all factors
 #dev.off()
-
-
 
 #Create NOISeq object bias detect and bias correction --- ---
 
@@ -304,7 +272,7 @@ abline(h=0.32,col=4)#h hardcoded
 
 #This function normalizes and filters features to only have the ones with
 #CPM>0.32
-#Plotted cpm_counts vs counts and 0.32 is the intersection, this may change
+#Plotted cpm_counts vs counts and 0.32 is the intersection, this may change and it is hardcoded
 
 countMatrixFiltered <- filtered.data(counts[-1], 
                                      factor = factors$libraryBatch,       #using all factors
@@ -346,7 +314,6 @@ dim(countMatrixFiltered)
 
 featureData <-  data.frame("feature" = rownames(countMatrixFiltered)) %>% left_join(myannot, by = "feature")
 rownames(featureData) <- featureData$feature
-
 dim(featureData)
 #[1] 22094     7
 #[1] 22070     7? <- 
@@ -470,6 +437,8 @@ dev.off()
 #PCA with prcomp --- ---
 
 norm_ARSyn <- exprs(norm_ARSyn)
+dim(norm_ARSyn)
+#[1] 22070   499
 
 #Build matrix
 
@@ -520,15 +489,6 @@ PC1_PC2_norm_ARSyn_NIA <- pca_norm_ARSyn_df %>%
        x = paste("PC1 (", sprintf("%.2f", variance_table_norm_ARSyn$Variance_Percentage[1]), "%)"),
        y = paste("PC2 (",  sprintf("%.2f", variance_table_norm_ARSyn$Variance_Percentage[3]), "%)")) +
   theme_minimal()
-
-#Names of features characteristics to add to final data
-
-mylength <- setNames(myannot$length, myannot$feature)
-
-mygc <- setNames(myannot$percentage_gene_gc_content, myannot$feature)
-
-mybiotype <-setNames(myannot$gene_biotype, myannot$feature)
-
 
 #Create new noiseq object with normalized counts 
 
@@ -659,37 +619,23 @@ dim(final_counts)
 final_metadata <- data.frame(
   "specimenID" = colnames(final_counts)[-1])   
 
+#Don't run this more than once!
 final_metadata <- final_metadata %>% 
   left_join(metadata, by = "specimenID")
 dim(final_metadata)
-#[1] 446  81
-#[1] 497  81 <-
+#[1] 446  41
+#[1] 497  41 <-
 
-#Final annotation --- --- 
+#Finally, save counts table --- ---
 
-final_annot <- getBM(attributes = c("ensembl_gene_id", 
-                                "percentage_gene_gc_content", "gene_biotype",
-                                "start_position","end_position","hgnc_symbol"),
-                 filters = "ensembl_gene_id", 
-                 values =  final_counts$feature,  #annotate the genes in the count matrix 
-                 mart = mart)
-
-#Add length column
-
-final_annot$length <- abs(final_annot$end_position-final_annot$start_position)
-dim(final_annot)
-#[1] 22071     7
-
-#Finally, save table --- ---
-
-vroom::vroom_write(final_counts, file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/ROSMAP_RNAseq_filtered_counts_DLPFC.txt")
+#vroom::vroom_write(final_counts, file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/ROSMAP_RNAseq_filteredQC_counts_DLPFC.txt")
 
 #Save filtered metadata --- ---
 
-vroom::vroom_write(final_metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filtered_DLPFC.txt")
+#vroom::vroom_write(final_metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filteredQC_DLPFC.txt")
 
 #Save annotation --- --- 
 
-vroom::vroom_write(final_annot, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_filtered_annotation_DLPFC.txt")
+#vroom::vroom_write(myannot, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_filteredQC_annotation_DLPFC.txt")
 
 #END
