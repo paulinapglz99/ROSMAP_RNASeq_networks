@@ -10,7 +10,7 @@ pacman::p_load('future',
 
 #read data ----------
 
-mat_dis <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/ROSMAP_AD_NIAReagan_discretizedmatrix.txt")
+mat_dis <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/ROSMAP_DLFPC_noAD_NIAReagan_discretizedmatrix.txt")
 
 # indexing data --------------
 
@@ -26,7 +26,8 @@ names(my_index_i) <- my_index  #giving names to index
 mat_dis <- mat_dis[-1]
 dim(mat_dis)
 #[1]   434 14951
-#[1] 22070   181 <- 
+#[1]   181 22070 <- AD
+#[1]   316 22070 <- noAD
 
 #the dimensions of the number of variables in mat_dis and the vector size must be the same
 
@@ -60,6 +61,6 @@ print(Sys.time() - tempus)
 
 #write matrix ----
 
-saveRDS(MI_MI, "/datos/rosmap/coexpre_matrix/ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho.rds")
+saveRDS(MI_MI, "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho.rds")
 
 #Next script is the 3.1.rds_to_matrix.R
