@@ -1,5 +1,5 @@
 #
-#topological_comparison.R
+#7.topological_comparison.R
 #This script makes the topological comparison of coexpression graphs 
 #constructed for people with AD and people without pathological AD.
 
@@ -14,9 +14,9 @@ pacman::p_load("igraph",
 
 #Get data --- --- 
 
-graphAD <- read_graph(file = '/datos/rosmap/graphs/AD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+graphAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
 
-graphnoAD <- read_graph(file = '/datos/rosmap/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+graphnoAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
 
 #Save graphs in a list
 
@@ -35,6 +35,9 @@ clustering_coefficient <- sapply(X = graphLists, FUN = transitivity)
 
 #graphAD graphnoAD 
 #0.4522337 0.4454295 
+
+#  graphAD graphnoAD <- 
+#0.4324213 0.4251001 
 
 #Degree distributions look the same? --- --- 
 
@@ -61,8 +64,11 @@ degree_dis <- ggplot(degree_distributions, aes(x = degree, fill = dx)) +
        x = "Degree",
        y = "Freq") +
   theme_minimal() +
-  scale_fill_manual(values = c("AD" = "darkblue", "noAD" = "darkgoldenrod")) +
+  scale_fill_manual(values = c("AD" = "darkblue", "noAD" = "pink")) +
   guides(fill = guide_legend(title = "Diagnosis"))
+
+#Vis
+degree_dis
 
 #ggsave(filename = "~/redesROSMAP/ROSMAP_RNASeq_networks/bothdx_degree_distributions_coexpression_NIAReagan_histogram.png", 
 #       plot = degree_dis, 
@@ -88,11 +94,14 @@ jaccard_nodes <- function(g1,g2){
 
 #Apply function to compare nodes
 
-NodesJaccard = sapply(X = graphLists, FUN = jaccard_nodes, g1 = graphnoAD)
+NodesJaccard <- sapply(X = graphLists, FUN = jaccard_nodes, g1 = graphnoAD)
 NodesJaccard
 
 #graphAD graphnoAD 
 #0.603139  1.000000 
+
+#graphAD graphnoAD 
+#0.6465551 1.0000000 
 
 #Do they have similar edges? --- ---
 
@@ -104,11 +113,14 @@ jaccard_edges <- function(g1, g2){
 
 #Apply function to compare edges
 
-EdgesJaccard = sapply(X = graphLists, FUN = jaccard_edges, g1 = graphnoAD)
+EdgesJaccard <- sapply(X = graphLists, FUN = jaccard_edges, g1 = graphnoAD)
 EdgesJaccard
 
 # graphAD graphnoAD 
 #0.3561419 1.0000000 
+
+# graphAD graphnoAD 
+#0.4396761 1.0000000 
 
 #Apply modularity algorithm --- ---
 
@@ -127,9 +139,9 @@ membership_modularity <- sapply(X = infomap_modularity, FUN = membership)
 
 # Assign the modules as attributes of the vertices
 
-V(graphAD)$modules <- membership_modularity[["graphAD"]]
+V(graphAD)$modules <- membership_modularity[[1]]
 
-V(graphnoAD)$modules <- membership_modularity[["graphnoAD"]]
+V(graphnoAD)$modules <- membership_modularity[[2]]
 
 # Plot the graph with ggraph and color by module.
 
@@ -155,11 +167,13 @@ ggraph(graphnoAD, layout = 'kk') +
 #The modularity index Q modularity(), is a measure of the proportion of edges that occur within communities,
 #relative to the expected proportion if all edges were placed randomly.
 
-modularity_scoreAD <- modularity(graphAD, membership_modularity[["graphAD"]])
+modularity_scoreAD <- modularity(graphAD, membership_modularity[[1]])
 #[1] 0.3620513
+#[1] 0.2564482 <-
 
-modularity_scorenoAD <- modularity(graphnoAD, membership_modularity[["graphnoAD"]])
+modularity_scorenoAD <- modularity(graphnoAD, membership_modularity[[2]])
 #[1] 0.3860467
+#[1] 0.316603 <- 
 
 #Comparison of modular structures between networks --- --- 
 
@@ -177,11 +191,13 @@ noADnodes <- V(graphnoAD)
 missing_elements_in_ADnodes <- setdiff(names(noADnodes), names(ADnodes))
 length(missing_elements_in_ADnodes)
 #[1] 296
+#[1] 383
 
 # Find elements in ADnodes but not in noADnodes
 missing_elements_in_noADnodes <- setdiff(names(ADnodes), names(noADnodes))
 length(missing_elements_in_noADnodes)
 #[1] 235
+#[1] 525
 
 #Add nodes missing to AD graph
 
@@ -229,6 +245,9 @@ comparison_methods
 
 #           vi           nmi    split.join          rand adjusted.rand 
 #3.539291e+00  5.624657e-01  1.355000e+03  8.480256e-01  5.993397e-02 
+
+# vi           nmi    split.join          rand adjusted.rand   <- 
+#4.055584e+00  5.614082e-01  2.819000e+03  8.784207e-01  4.885023e-02
 
 #END
 #Next script is the 5.1functional_comparison_of_modules.R

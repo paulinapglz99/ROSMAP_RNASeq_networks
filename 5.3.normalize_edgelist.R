@@ -34,6 +34,6 @@ elapsed_time <- end_time - start_time
 print(paste("Elapsed Time: ", elapsed_time))
 
 #Write data
-vroom::vroom_write(edgelist_normalized, file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.txt')
+vroom::vroom_write(edgelist_normalized, file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.txt')
 
 #END

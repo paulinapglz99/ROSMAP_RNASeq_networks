@@ -15,7 +15,9 @@ tempus <- Sys.time()
 
 #Get edgelist --- ---
 
-full_edgelist <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.txt')
+full_edgelist <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.txt')
+dim(full_edgelist)
+#[1] 243531415         4
 
 #Declare functions --- ---
 
@@ -133,7 +135,7 @@ print(Sys.time() - tempus)
 
 #Save table
 
-#vroom::vroom_write(metric_table, file = "/datos/rosmap/cuts_by_heuristics/AD_graphs/metrics_percentiles_normalizedMI_AD_ROSMAP_RNAseq_MutualInfo_NIA_Reagan_dicho.txt")
+vroom::vroom_write(metric_table, file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/metrics_percentiles_normalizedMI_noAD_ROSMAP_RNAseq_DLFPC_MutualInfo_NIA_Reagan_dicho.txt")
 
 #If you want to save graphs
 
@@ -141,22 +143,22 @@ graph_to_save <- results_networks[[3]] #Indicate the graph to save by the index
 
 #Save in graphml format
 
-write_graph(graph_to_save, file = '/datos/rosmap/graphs/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml',
+write_graph(graph_to_save, file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml',
             format = "graphml")
 
-#Save edgelist
+#Save edgelist of graph
 
 edgelist_to_save <- percentile_tables[[3]] %>% as.data.frame() #Indicate the graph to save by the index
 edgelist_to_save<- edgelist_to_save[-1]
 
 #Save graph in edgelist format
 
-#vroom::vroom_write(edgelist_to_save,  file = '/datos/rosmap/cuts_by_MI/noAD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.tsv')
+vroom::vroom_write(edgelist_to_save,  file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/percentile99.99_ROSMAP_RNAseq_DLFPC_MutualInfo_AD_NIA_Reagan_dicho_edgelist.tsv')
 
-#Obtain adjacency matrix
+#Obtain adjacency matrix from graph
 
 adj_matrix <- as_adjacency_matrix(results_networks[[3]], sparse = FALSE, attr = "MI") %>% as.data.frame()
 
-vroom::vroom_write(adj_matrix, file = '/datos/rosmap/cuts_by_heuristics/noAD_graphs/percentile99.99_ROSMAP_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_we_adjacency_matrix.tsv')
+vroom::vroom_write(adj_matrix, file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99_adjacency_matrix.txt')
 
 #END

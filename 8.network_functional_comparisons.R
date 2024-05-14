@@ -1,5 +1,5 @@
 #
-#5.1functional_comparison_of_modules.R
+#8.network_functional_comparisons.R
 
 #This script makes the functional modular comparison of coexpression graphs 
 #constructed for people with AD and people without pathological AD.

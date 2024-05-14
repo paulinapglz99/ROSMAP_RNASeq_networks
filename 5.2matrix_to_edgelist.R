@@ -5,12 +5,13 @@
 
 #Libraries  --- --- 
 
-pacman::p_load('tidyverse')
+pacman::p_load('tidyverse', 
+               "Matrix")
 
 #Read adjacency matrix --- ---
 
 #This matrix may be very heavy
-matrix <- read_rds("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds")
+matrix <- readRDS("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds")
 dim(matrix)
 #[1] 22070 22070 <- AD
 
@@ -40,7 +41,7 @@ dim(full_edgelist)
 
 #save edgelist for later
 
-#vroom::vroom_write(full_edgelist, file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.txt')
+vroom::vroom_write(full_edgelist, file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho_edgelist.txt')
 #This edgelist can be found as /datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho_edgelist.txt.gz
 
 #END

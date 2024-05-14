@@ -19,7 +19,7 @@ coexpre_mat_unnested<- mi_list
 coexpre_mat_unnested <- as.data.frame(do.call(cbind, mi_list)) %>% as.matrix()
 dim(coexpre_mat_unnested) #this must be a square matrix
 #[1] 14951 14951
-#{[1] 22070 22070}
+#[1] 22070 22070
 
 #If the diagonal of the matrix does not have the same values, we must verify
 #that at least the elements in the diagonal are the highest values of the columns.
@@ -37,7 +37,7 @@ coexpre_mat_unnested[lower.tri(coexpre_mat_unnested, diag = TRUE)] <- NA
 
 #Save matrix --- ---
 
-saveRDS(coexpre_mat_unnested, file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds")
+saveRDS(coexpre_mat_unnested, file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/MI_matrices_NIA_Reagan/ROSMAP_DLFPC_RNAseq_MutualInfo_noAD_NIA_Reagan_dicho.rds")
 
 #Pivot it to build an edgelist --- ---
 
