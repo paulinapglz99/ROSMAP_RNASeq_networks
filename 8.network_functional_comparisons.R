@@ -25,10 +25,11 @@ library("org.Hs.eg.db", character.only = TRUE)
 
 #Get data --- --- 
 
-graphAD <- read_graph(file = '/datos/rosmap/graphs/AD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+graphAD <- read_graph(file =  '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml',
+                      format = 'graphml')
 
-graphnoAD <- read_graph(file = '/datos/rosmap/graphs/noAD_ROSMAP_RNAseq_MutualInfograph_percentile99.99.graphml', format = 'graphml')
-
+graphnoAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99.graphml',
+                        format = 'graphml')
 #Save graphs in a list
 
 graphLists <- list(graphAD = graphAD,
@@ -54,7 +55,7 @@ enrichment_fullnet_AD <- enrichGO(gene = V(graphAD)$name,
 
 #Gene concept network enrichment
 
-enrichment_fullnet_AD_cnet <- cnetplot(enrichment_fullnet_AD, circular = TRUE, colorEdge = TRUE, showCategory= 10)
+enrichment_fullnet_AD_cnet <- cnetplot(enrichment_fullnet_AD, showCategory= 5)
 
 #Dotplot enrichment
 
@@ -74,16 +75,16 @@ enrichment_fullnet_noAD <- enrichGO(gene = V(graphnoAD)$name,
                                     pvalueCutoff = 0.05, 
                                     qvalueCutoff = 0.10)
 
-#Barplot enrichment
+#Gene concept network enrichment
 
-barplot(enrichment_fullnet_noAD)
+enrichment_fullnet_noAD_cnet <- cnetplot(enrichment_fullnet_noAD, showCategory= 5)
 
 #Dotplot enrichment
 
-dotplot(enrichment_fullnet_noAD)
+enrichment_fullnet_noAD_dot <- dotplot(enrichment_fullnet_noAD)
 
 
-#Define imilarity of Enriched Processes, Jaccard Index function --- ---
+#Define similarity of Enriched Processes, Jaccard Index function --- ---
 
 jaccard_simplex <- function(a,b){
   length(intersect(a,b))/length(union(a,b))
@@ -105,11 +106,24 @@ modularity <- sapply(X = graphLists, FUN = cluster_infomap)
 
 nodes_membership <- sapply(modularity, FUN = membership)
 
+# Assign membership to the nodes of each network
+for (i in seq_along(graphLists)) {
+  V(graphLists[[i]])$community <- nodes_membership[[i]]
+}
+
 # Extract list of nodes by community for each graph
 
 nodes_by_community_list <- lapply(seq_along(nodes_membership), function(i) {
   split(V(graphLists[[i]])$name, nodes_membership[[i]])
 })
+
+#Export to see graphs in cytoscape
+
+write_graph(graphLists[["graphAD"]], file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99_infomap.graphml", 
+            format = "graphml")
+            
+write_graph(graphLists[["graphnoAD"]], file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99_infomap.graphml",
+            format = "graphml")
 
 #I'd like to add names to lists of graphs again
 
@@ -161,6 +175,8 @@ enriched_results_noAD <- lapply(enriched_results_noAD, replace_null) # Exchange 
 
 #Functional module comparison between two graphs --- ---
 
+#1.How similar are the sets of biological functions that are associated to the whole network, through the enrichment of individual modules?
+
 #Similarity of modules in terms of associated biological functions
 
 #It is possible to compare each module of the network of interest to the modules
@@ -172,7 +188,7 @@ num_modules_noAD <- length(enriched_results_noAD)
 
 similarity_matrix <- matrix(NA, nrow = num_modules_AD, ncol = num_modules_noAD)
 
-# Asignar nombres de filas y columnas
+# Assign row and column names
 rownames(similarity_matrix) <- paste("AD", 1:num_modules_AD, sep = "_")
 colnames(similarity_matrix) <- paste("noAD", 1:num_modules_noAD, sep = "_")
 
@@ -207,10 +223,10 @@ num_equal_nodes <- data.frame(module_number = rownames(similarity_matrix), modul
 
 #Number of modules associated to a given biological function --- ---
 
-# Obtener la longitud del vector más corto
+# Obtain the length of the shortest vector
 min_length <- min(length(v1), length(v2))
 
-# Calcular la distancia euclidiana solo para las dimensiones compartidas
+# Calculate the Euclidean distance for shared dimensions only.
 euclidean_distance <- sqrt(sum((v1[1:min_length] - v2[1:min_length])^2))
 
 print(euclidean_distance)
@@ -219,7 +235,7 @@ print(euclidean_distance)
 
 euclidean_distance <- matrix(NA, nrow = num_modules_AD, ncol = num_modules_noAD)
 
-# Asignar nombres de filas y columnas
+# Assign row and column names
 rownames(euclidean_distance) <- paste("AD", 1:num_modules_AD, sep = "_")
 colnames(euclidean_distance) <- paste("noAD", 1:num_modules_noAD, sep = "_")
 

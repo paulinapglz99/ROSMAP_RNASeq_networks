@@ -18,7 +18,6 @@ library("org.Hs.eg.db", character.only = TRUE)
 graphAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml',
                       format = 'graphml')
 
-
 graphnoAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99.graphml',
                         format = 'graphml')
 
@@ -37,6 +36,91 @@ convert_ens_to_symbol <- function(ensembl_ids) {
         values = ensembl_ids,
         mart = ensembl)
 }
+
+##Change names of vertex from both graphs --- ---
+
+# Extract vertex names
+
+graphAD_vnames <- V(graphAD)$name
+length(graphAD_vnames)
+
+#Translate names
+
+graphAD_vnames_trad <-convert_ens_to_symbol(graphAD_vnames)
+
+# Reemplazar los valores faltantes en la columna 'external_gene_name' con los valores de 'ensembl_gene_id'
+graphAD_vnames_trad <- graphAD_vnames_trad %>%
+  mutate(external_gene_name = ifelse(external_gene_name == "", ensembl_gene_id, external_gene_name))
+
+
+# Create a vector of translated names using the dictionary
+# We need to ensure that the actual names of the network are in the dictionary
+
+graphAD_vnames_trad <- setNames(graphAD_vnames_trad$external_gene_name, graphAD_vnames_trad$ensembl_gene_id)
+
+# Ordena graphAD_vnames_trad según el orden de graphAD_vnames
+sorted_graphAD_vnames_trad <- graphAD_vnames_trad[match(graphAD_vnames, names(graphAD_vnames_trad))]
+
+# Assign the new names to the network vertices.
+
+V(graphAD)$name <- sorted_graphAD_vnames_trad
+
+###TRYING HARD ######
+
+# Extraer los nombres de los vértices
+graphAD_vnames <- V(graphAD)$name
+
+# Traduce los nombres
+graphAD_vnames_trad <- convert_ens_to_symbol(graphAD_vnames)
+
+# Crea un vector de nombres traducidos utilizando el diccionario
+graphAD_vnames_trad <- setNames(graphAD_vnames_trad$external_gene_name, graphAD_vnames_trad$ensembl_gene_id)
+
+# Ordena graphAD_vnames_trad según el orden de graphAD_vnames y conserva los nombres originales cuando no se encuentra una traducción
+sorted_graphAD_vnames_trad <- sapply(graphAD_vnames, function(x) {
+  if (x %in% names(graphAD_vnames_trad)) {
+    return(graphAD_vnames_trad[[x]])
+  } else {
+    return(x)
+  }
+})
+
+# Asigna los nuevos nombres a los vértices del grafo
+V(graphAD)$name <- sorted_graphAD_vnames_trad
+
+# Verifica los nombres de los vértices
+print(V(graphAD)$name)
+
+###TRYING HARD ######
+
+
+
+
+
+
+
+
+# Extraer los nombres actuales de los vértices
+graphAD_vnames <- V(graphAD)$name
+
+# Crear un vector de nombres traducidos utilizando el diccionario
+# Necesitamos asegurar que los nombres actuales del grafo estén en el diccionario
+name_map <- setNames(diccionario$external_gene_name, diccionario$ensembl_gene_id)
+
+# Ahora mapeamos los nombres actuales a los nuevos nombres
+new_names <- sapply(graphAD_vnames, function(x) {
+  if (x %in% names(name_map)) {
+    return(name_map[[x]])
+  } else {
+    return(x)
+  }
+})
+
+# Asignar los nuevos nombres a los vértices del grafo
+V(graphAD)$name <- new_names
+
+
+#####################
 
 #Identify hub genes --- ---
 
@@ -190,6 +274,10 @@ hub_genes_noAD <- hub_genes_noAD <- hub_genes_noAD %>% left_join(hub_genes_noAD.
 #
 genes_en_AD_no_noAD_sym <- setdiff(hub_gene_AD$external_gene_name, hub_genes_noAD$external_gene_name)
 genes_en_AD_no_noAD_ens<- setdiff(hub_gene_AD$ensembl_gene_id, hub_genes_noAD$ensembl_gene_id)
+
+#Save hub genes to explore them in the partitions
+
+vroom::vroom_write(genes_en_AD_no_noAD_ens)
 
 #Comparison of hub genes not found in healthy people
 
@@ -347,10 +435,6 @@ ggsave("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts
 #What genes do both networks share?
 
 shared_high_be_genes <- intersect(high_betweenness_nodes_AD$external_gene_name, high_betweenness_nodes_noAD$external_gene_name)
-
-# Genes in AD but not in no AD
-high_be_genes_en_AD_no_noAD <- setdiff(high_betweenness_nodes_AD$external_gene_name, high_betweenness_nodes_noAD$external_gene_name)
-
 #
 
 high_be_genes_en_AD_no_noAD_sym <- setdiff(high_betweenness_nodes_AD$external_gene_name, high_betweenness_nodes_noAD$external_gene_name)
@@ -362,11 +446,22 @@ high_be_genes_en_AD_no_noAD.df <- high_betweenness_nodes_AD %>% filter(external_
 dim(high_be_genes_en_AD_no_noAD.df)
 #[1] 66  4
 
-#Network of hub genes in the AD graph but not in the noAD graph
+#Network of hub genes in the AD graph but not in the noAD graph --- ---
 
 indexed_ver_be <- which(V(graphAD)$name %in% high_be_genes_en_AD_no_noAD_ens)
 
 high_be_genes_en_AD_no_noAD.g <- induced_subgraph(graphAD, indexed_ver_be)
+
+plot(high_be_genes_en_AD_no_noAD.g)
+
+#
+
+name <- setNames(high_be_genes_en_AD_no_noAD.df$ensembl_gene_id, high_be_genes_en_AD_no_noAD.df$external_gene_name )
+#name <- paste(names(name), "=", unname(name), collapse = ", ")
+name <- paste0('"', names(name), '" = "', unname(name), '"', collapse = ", ")
+name <- c(name)
+
+V(high_be_genes_en_AD_no_noAD.g)$name <- name[V(high_be_genes_en_AD_no_noAD.g)$name]
 
 plot(high_be_genes_en_AD_no_noAD.g)
 
@@ -383,10 +478,7 @@ names <- c(sym_names)
 V(high_be_genes_en_AD_no_noAD.g)$label <- names[V(high_be_genes_en_AD_no_noAD.g)$name]
 plot(high_be_genes_en_AD_no_noAD.g)
 
-
 V(high_be_genes_en_AD_no_noAD.g)$additional_name <- high_be_genes_en_AD_no_noAD.df$external_gene_name
-
-vertex_index <- which(V(high_be_genes_en_AD_no_noAD.g)$additional_name == "RSF1")
 
 #Save graph
 
@@ -394,6 +486,7 @@ write_graph(genes_en_AD_no_noAD.g, file = '/datos/rosmap/data_by_counts/ROSMAP_c
             format = "graphml")
 
 #NEXT QUESTION IS What modules do these genes belong to? --- ---
+
 
 
 #END
