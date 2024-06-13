@@ -28,9 +28,9 @@ metadata <- metadata %>%
   filter(assay == "rnaSeq") %>% 
   mutate(NIA_reagan_ADLikelihood = case_when(         
     ceradsc == 4 ~ "0",  #No AD (0)
-    (ceradsc == 1 & (braaksc == 5 | braaksc ==  4)) ~ "1", #High likelihood
+    (ceradsc == 1 & (braaksc == 5 | braaksc ==  4)) ~ "3", #High likelihood
     (ceradsc == 2 & (braaksc == 3 | braaksc == 4)) ~ "2", #Intermediate likelihood
-    (ceradsc == 3 & (braaksc == 1 | braaksc == 2)) ~ "2", #Low likelihood
+    (ceradsc == 3 & (braaksc == 1 | braaksc == 2)) ~ "1", #Low likelihood
     TRUE ~ NA_character_  # Handle no-specified cases
   )) %>% 
   mutate(dicho_NIA_reagan = case_when(
@@ -59,6 +59,33 @@ unique(metadata_ind$tissue)
 #I have data from brain regions
 #[1] "frontal cortex"                 "temporal cortex"                "dorsolateral prefrontal cortex"
 #[4] NA                               "Head of caudate nucleus"        "posterior cingulate cortex"    
+
+#Exploring metadata by tissue --- ---
+
+dim(metadata %>% filter(!is.na(tissue)))
+
+met_tissue <- ggplot(metadata, aes(x = as.factor(tissue), fill = as.factor(tissue))) +
+  geom_bar() +
+  geom_text(stat='count', aes(label=..count..), vjust=-0.5) +  
+  labs(
+    title = "RNA-seq Samples sequenced by tissue",
+    x = "",
+    y = "") + 
+  scale_x_discrete(labels = c("dorsolateral prefrontal cortex" = "Dorsal prefrontal cortex", 
+                              "frontal cortex" = "Frontal cortex", 
+                              "Head of caudate nucleus" = "Head of caudate nucleus", 
+                              "posterior cingulate cortex" = "Posterior cingulate cortex", 
+                              "temporal cortex" = "Temporal cortex")) +
+  guides(fill = "none")  +
+  scale_fill_brewer(palette="Set1") +
+  theme_minimal()
+
+ggsave("metadata_by_tissue.png", plot = met_tissue, 
+       device = "png",
+       width = 30, 
+       height = 15,
+       units = "cm", 
+       dpi = "print")
 
 #Stratification by diagnosis --- ---
 
@@ -339,11 +366,11 @@ dim(metadata_PCC)
 counts_one <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch1_gene_all_counts_matrix_clean.txt')
 counts_two <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch2_gene_all_counts_matrix_clean.txt') 
 counts_three <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch3_gene_all_counts_matrix_clean.txt')
-counts_four <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch3_gene_all_counts_matrix_clean.txt')
+counts_four <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/raw_counts/ROSMAP_batch4_gene_all_counts_matrix_clean.txt')
 
 #Merge expression data into one
 
-counts <- counts <- dplyr::left_join(counts_one, counts_two, by = 'feature') %>%
+counts <- dplyr::left_join(counts_one, counts_two, by = 'feature') %>%
   dplyr::left_join(counts_three, by = 'feature') %>% 
   dplyr::left_join(counts_four, by = 'feature')
 dim(counts)
@@ -353,40 +380,41 @@ dim(counts)
 
 counts_FC <- counts[, (colnames(counts) %in% metadata_FC$specimenID)] %>% mutate(features = counts[1], .before = 1)
 dim(counts_FC)
-#[1] 60607     1
+#[1] 60607     124
 
 #Counts from the temporal cortex
 
 counts_TC <- counts[, (colnames(counts) %in% metadata_TC$specimenID)] %>% 
   mutate(counts[1], .before = 1)
 dim(counts_TC)
-#[1] 60607     1
+#[1] 60607     126
 
 #Counts for Dorsoral Prefrontal Cortex
 counts_DLPFC <- counts[, (colnames(counts) %in% unique(metadata_DLPFC$specimenID))] %>% 
   mutate(counts[1], .before = 1)
 dim(counts_DLPFC)
-#[1] 60607   891
+#[1] 60607   1142
 
 #Counts for  Head of caudate nucleus 
 counts_HCN <- counts[, (colnames(counts) %in% unique(metadata_HCN$specimenID))] %>% 
   mutate(counts[1], .before = 1)
 dim(counts_HCN)
-#[1] 60606   749
+#[1] 60607   750
 
 #Counts for posterior cingulate cortex
 counts_PCC <- counts[, c(colnames(counts) %in% metadata_PCC$specimenID)]  %>% 
   mutate(counts[1], .before = 1)
 dim(counts_PCC)
-#[1] 60606   573
+#[1] 60607   672
 
 #Mapping counts
 
 mapping_counts <- data.frame(
-  Region = c("DLPFC", "HCN", "PCC"),
-  samples = c(dim(counts_DLPFC)[2], dim(counts_HCN)[2], dim(counts_PCC)[2]), 
-  features = c(dim(counts_DLPFC)[1], dim(counts_HCN)[1], dim(counts_PCC)[1])
-)
+  Region = c("DLPFC", "HCN", "PCC", "TC", "FC"),
+  samples = c(dim(counts_DLPFC)[2], dim(counts_HCN)[2], dim(counts_PCC)[2], dim(counts_TC)[2], dim(counts_FC)[2]), 
+  features = c(dim(counts_DLPFC)[1], dim(counts_HCN)[1], dim(counts_PCC)[1], dim(counts_TC)[1], dim(counts_FC)[1])
+  )
+
 
 #Plot
 

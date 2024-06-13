@@ -19,7 +19,8 @@
 pacman::p_load("igraph", 
                "tidyverse",
                "clusterProfiler", 
-               "gridExtra")
+               "gridExtra", 
+               "biomaRt")
 
 library("org.Hs.eg.db", character.only = TRUE)
 
@@ -34,6 +35,42 @@ graphnoAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/count
 
 graphLists <- list(graphAD = graphAD,
                    graphnoAD = graphnoAD)
+
+# Define functions --- ---
+
+# Connecting to the Ensembl database through biomaRt
+ensembl <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+
+# Define function to convert from ENSMBL to SYMBOL
+convert_ens_to_symbol <- function(ensembl_ids) {
+  getBM(attributes = c("ensembl_gene_id", "external_gene_name", "chromosome_name"),
+        filters = "ensembl_gene_id",
+        values = ensembl_ids,
+        mart = ensembl)
+}
+
+# Define function for translating vertex names 
+
+translate_vertex_names <- function(graph) {
+  graph_vnames <- V(graph)$name   # Extract vertex names
+  graph_vnames_trad <- convert_ens_to_symbol(graph_vnames)   # Translate names
+  # Replace the missing values in the column 'external_gene_name' with the values of 'ensembl_gene_id'.
+  graph_vnames_trad$external_gene_name <- ifelse(graph_vnames_trad$external_gene_name == "", graph_vnames_trad$ensembl_gene_id, graph_vnames_trad$external_gene_name)
+    # Create a vector of translated names using the dictionary
+  # We need to ensure that the actual names of the network are in the dictionary
+  graph_vnames_trad <- setNames(graph_vnames_trad$external_gene_name, graph_vnames_trad$ensembl_gene_id)
+    # Sort graph_vnames_trad according to the order of graph_vnames
+  sorted_graph_vnames_trad <- graph_vnames_trad[match(graph_vnames, names(graph_vnames_trad))]
+    # Assign the new names to the network vertices.
+  V(graph)$name <- sorted_graph_vnames_trad
+  return(graph)
+}
+
+#Define similarity of Enriched Processes, Jaccard Index function --- ---
+
+jaccard_simplex <- function(a,b){
+  length(intersect(a,b))/length(union(a,b))
+}
 
 #Set seed for modularity algorithm --- ---
 
@@ -83,28 +120,34 @@ enrichment_fullnet_noAD_cnet <- cnetplot(enrichment_fullnet_noAD, showCategory= 
 
 enrichment_fullnet_noAD_dot <- dotplot(enrichment_fullnet_noAD)
 
-
-#Define similarity of Enriched Processes, Jaccard Index function --- ---
-
-jaccard_simplex <- function(a,b){
-  length(intersect(a,b))/length(union(a,b))
-}
-
-#Comparison of enrichments
+#Comparison of enrichments --- ---
 
 OverallEnrichedProcessJ <- jaccard_simplex(names(enrichment_fullnet_AD@geneSets), names(enrichment_fullnet_noAD@geneSets))
 #[1] 0.8042686
-
+#This answers the question of 2. How similar are the modules found in each network, in terms of the sets of associated biological functions?
+  
 #Similarity of modules in terms of associated biological functions --- ---
 
 #Modularity algorithm 
 
 modularity <- sapply(X = graphLists, FUN = cluster_infomap)
-#This can't be seen if it's not called from console
+
+#Calculate Q score 
+
+Qscore <- sapply(modularity, FUN = modularity)
+
+#Calculate clustering coefficient
+
+clus_coe <- sapply(graphLists, FUN = transitivity)
 
 #Split lists of nodes by module
 
 nodes_membership <- sapply(modularity, FUN = membership)
+
+#Create df
+nodes_membership_AD.df <- data.frame(ensembl_gene_id = names(nodes_membership$graphAD),  membership = nodes_membership$graphAD)
+
+nodes_membership_noAD.df <- data.frame(ensembl_gene_id = names(nodes_membership$graphnoAD),  membership = nodes_membership$graphnoAD)
 
 # Assign membership to the nodes of each network
 for (i in seq_along(graphLists)) {
@@ -117,11 +160,57 @@ nodes_by_community_list <- lapply(seq_along(nodes_membership), function(i) {
   split(V(graphLists[[i]])$name, nodes_membership[[i]])
 })
 
-#Export to see graphs in cytoscape
+#In which modules are found our hub genes? --- ---
+
+#Get hub genes 
+
+hub_genes <- scan("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/genes_en_AD_no_noAD_ens.txt",  what = character())
+
+hub_genes.x <- nodes_membership_AD.df %>% filter(ensembl_gene_id %in% hub_genes)
+
+hub_genes.xy <- convert_ens_to_symbol(hub_genes.x)
+
+hub_genes.x <- hub_genes.x %>% left_join(hub_genes.xy, by ="ensembl_gene_id")
+
+#In which modules are found our high betweeness genes?--- ---
+
+high_be_genes <-  scan(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/high_be_genes_en_AD_no_noAD_ens.txt",   what = character())
+
+high_be_genes.x <- nodes_membership_AD.df %>% filter(ensembl_gene_id %in% high_be_genes)
+
+high_be_genes.xy <- convert_ens_to_symbol(high_be_genes.x)
+
+high_be_genes.x <- high_be_genes.x %>% left_join(high_be_genes.xy, by ="ensembl_gene_id")
+
+#Export to see graphs in cytoscape --- ---
+
+#Translate them first 
+
+graphAD_trad <- V(graphLists[["graphAD"]])$name
+graphAD_trad <- convert_ens_to_symbol(graphAD_trad)
+graphAD_trad$external_gene_name <-  ifelse(graphAD_trad$external_gene_name == "", graphAD_trad$ensembl_gene_id, graphAD_trad$external_gene_name)
+graphAD_trad <- setNames(graphAD_trad$external_gene_name, graphAD_trad$ensembl_gene_id)
+
+sorted_graphAD_trad <- graphAD_trad[match(V(graphLists[["graphAD"]])$name, names(graphAD_trad))]
+V(graphLists[["graphAD"]])$name <- sorted_graphAD_trad
+
+#Save graph
 
 write_graph(graphLists[["graphAD"]], file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99_infomap.graphml", 
             format = "graphml")
-            
+
+#Translate again 
+
+graphnoAD_trad <- V(graphLists[["graphnoAD"]])$name
+graphnoAD_trad <- convert_ens_to_symbol(graphnoAD_trad)
+graphnoAD_trad$external_gene_name <-  ifelse(graphAD_trad$external_gene_name == "", graphAD_trad$ensembl_gene_id, graphAD_trad$external_gene_name)
+graphnoAD_trad <- setNames(graphAD_trad$external_gene_name, graphAD_trad$ensembl_gene_id)
+
+sorted_graphAD_trad <- graphAD_trad[match(V(graphLists[["graphAD"]])$name, names(graphAD_trad))]
+V(graphLists[["graphAD"]])$name <- sorted_graphAD_trad
+
+#Save graph
+
 write_graph(graphLists[["graphnoAD"]], file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99_infomap.graphml",
             format = "graphml")
 
@@ -208,6 +297,10 @@ head(similarity_matrix)
 #Find the highest similarity of the matrix  
 max(similarity_matrix, na.rm = TRUE)
 
+#Network with this matrix
+
+sim_node.g <- graph_from_adjacency_matrix(similarity_matrix, mode = "undirected", weighted = TRUE)
+
 #Number of modules in networks that have Jaccard index J=1 with a module of the Main network --- ---
 
 # Function to count the number of columns with value equal to 1
@@ -221,29 +314,16 @@ ones_count <- apply(similarity_matrix, 1, count_ones)
 # Crear una tabla con los resultados
 num_equal_nodes <- data.frame(module_number = rownames(similarity_matrix), modules_with_jaccardindex1 = ones_count)
 
+num_equal_nodes.x <- num_equal_nodes %>% filter(modules_with_jaccardindex1 ==1)
+dim(num_equal_nodes.x)
+#[1] 15  2
+
+#This answers the question of 1. How similar are the sets of biological functions that are associated to the whole network, through the enrichment of individual modules?
+  
 #Number of modules associated to a given biological function --- ---
 
-# Obtain the length of the shortest vector
-min_length <- min(length(v1), length(v2))
+#3.In how many modules is represented each biological process?
 
-# Calculate the Euclidean distance for shared dimensions only.
-euclidean_distance <- sqrt(sum((v1[1:min_length] - v2[1:min_length])^2))
 
-print(euclidean_distance)
 
-#
 
-euclidean_distance <- matrix(NA, nrow = num_modules_AD, ncol = num_modules_noAD)
-
-# Assign row and column names
-rownames(euclidean_distance) <- paste("AD", 1:num_modules_AD, sep = "_")
-colnames(euclidean_distance) <- paste("noAD", 1:num_modules_noAD, sep = "_")
-
-for (i in 1:num_modules_AD) {
-  for (j in 1:num_modules_noAD) {
-    # Acceder a los geneSets de las redes AD y no AD
-    geneSets_AD <- length(enriched_results_AD[[i]]@geneSets)
-    geneSets_noAD <- length(enriched_results_noAD[[j]]@geneSets)
-    euclidean_distance[i, j] <- sqrt(sum((v1[1:num_modules_AD] - v2[1:num_modules_noAD])^2))
-  }
-}

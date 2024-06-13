@@ -19,7 +19,7 @@ pacman::p_load('dplyr',
 
 #Read counts data, this was already filtered by 1.QC_pre_analysis.R
 
-counts <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/ROSMAP_RNAseq_filtered_counts_DLPFC.txt') %>% as.data.frame()
+counts <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/full_counts/ROSMAP_RNAseq_filtered_counts_DLPFC.txt') %>% as.data.frame()
 dim(counts)
 #[1] 60558   638
 
@@ -79,15 +79,7 @@ myannot <- myannot %>% rename(ensembl_gene_id = "feature")
 myannot$length <- abs(myannot$end_position-myannot$start_position)
 dim(myannot)
 #[1] 60229     7
-
-#Explore pre-annotation 
-
-ggplot(myannot, aes(x = gene_biotype, fill = as.factor(gene_biotype))) +
-  geom_bar() +
-  geom_text(stat='count', aes(label=..count..), vjust=-0.5) +  
-  labs(x = "Gene biotype", y = "Freq", title = "Gene biotype distribution ") +
-  theme_minimal() +
-  theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+#[1] 60122     7 <- 
 
 # NOISeq object --- ----
 

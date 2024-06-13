@@ -100,7 +100,7 @@ NodesJaccard
 #graphAD graphnoAD 
 #0.603139  1.000000 
 
-#graphAD graphnoAD 
+#graphAD graphnoAD  <-----
 #0.6465551 1.0000000 
 
 #Do they have similar edges? --- ---
@@ -250,4 +250,3 @@ comparison_methods
 #4.055584e+00  5.614082e-01  2.819000e+03  8.784207e-01  4.885023e-02
 
 #END
-#Next script is the 5.1functional_comparison_of_modules.R
