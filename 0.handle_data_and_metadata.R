@@ -28,7 +28,7 @@ metadata <- metadata %>%
   filter(assay == "rnaSeq") %>% 
   mutate(NIA_reagan_ADLikelihood = case_when(         
     ceradsc == 4 ~ "0",  #No AD (0)
-    (ceradsc == 1 & (braaksc == 5 | braaksc ==  4)) ~ "3", #High likelihood
+    (ceradsc == 1 & (braaksc == 5 | braaksc ==  6)) ~ "3", #High likelihood
     (ceradsc == 2 & (braaksc == 3 | braaksc == 4)) ~ "2", #Intermediate likelihood
     (ceradsc == 3 & (braaksc == 1 | braaksc == 2)) ~ "1", #Low likelihood
     TRUE ~ NA_character_  # Handle no-specified cases
@@ -43,68 +43,68 @@ metadata <- metadata %>%
       ))
 dim(metadata)
 #[1] 2809   41
-
-#Explore metadata --- ---
-
-# If i'd like to observe only data per individual I need to delete duplicates, then only for exploration purposes
-
-metadata_ind <- metadata %>% distinct(individualID, .keep_all = TRUE)
-dim(metadata)
-#[1] 1169   41
-
-#Types of brain regions
-
-unique(metadata_ind$tissue)
-
-#I have data from brain regions
-#[1] "frontal cortex"                 "temporal cortex"                "dorsolateral prefrontal cortex"
-#[4] NA                               "Head of caudate nucleus"        "posterior cingulate cortex"    
-
-#Exploring metadata by tissue --- ---
-
-dim(metadata %>% filter(!is.na(tissue)))
-
-met_tissue <- ggplot(metadata, aes(x = as.factor(tissue), fill = as.factor(tissue))) +
-  geom_bar() +
-  geom_text(stat='count', aes(label=..count..), vjust=-0.5) +  
-  labs(
-    title = "RNA-seq Samples sequenced by tissue",
-    x = "",
-    y = "") + 
-  scale_x_discrete(labels = c("dorsolateral prefrontal cortex" = "Dorsal prefrontal cortex", 
-                              "frontal cortex" = "Frontal cortex", 
-                              "Head of caudate nucleus" = "Head of caudate nucleus", 
-                              "posterior cingulate cortex" = "Posterior cingulate cortex", 
-                              "temporal cortex" = "Temporal cortex")) +
-  guides(fill = "none")  +
-  scale_fill_brewer(palette="Set1") +
-  theme_minimal()
-
-ggsave("metadata_by_tissue.png", plot = met_tissue, 
-       device = "png",
-       width = 30, 
-       height = 15,
-       units = "cm", 
-       dpi = "print")
+# 
+# #Explore metadata --- ---
+# 
+# # If i'd like to observe only data per individual I need to delete duplicates, then only for exploration purposes
+# 
+# metadata_ind <- metadata %>% distinct(individualID, .keep_all = TRUE)
+# dim(metadata)
+# #[1] 1169   41
+# 
+# #Types of brain regions
+# 
+# unique(metadata_ind$tissue)
+# 
+# #I have data from brain regions
+# #[1] "frontal cortex"                 "temporal cortex"                "dorsolateral prefrontal cortex"
+# #[4] NA                               "Head of caudate nucleus"        "posterior cingulate cortex"    
+# 
+# #Exploring metadata by tissue --- ---
+# 
+# dim(metadata %>% filter(!is.na(tissue)))
+# 
+# met_tissue <- ggplot(metadata, aes(x = as.factor(tissue), fill = as.factor(tissue))) +
+#   geom_bar() +
+#   geom_text(stat='count', aes(label=..count..), vjust=-0.5) +  
+#   labs(
+#     title = "RNA-seq Samples sequenced by tissue",
+#     x = "",
+#     y = "") + 
+#   scale_x_discrete(labels = c("dorsolateral prefrontal cortex" = "Dorsal prefrontal cortex", 
+#                               "frontal cortex" = "Frontal cortex", 
+#                               "Head of caudate nucleus" = "Head of caudate nucleus", 
+#                               "posterior cingulate cortex" = "Posterior cingulate cortex", 
+#                               "temporal cortex" = "Temporal cortex")) +
+#   guides(fill = "none")  +
+#   scale_fill_brewer(palette="Set1") +
+#   theme_minimal()
+# 
+# ggsave("metadata_by_tissue.png", plot = met_tissue, 
+#        device = "png",
+#        width = 30, 
+#        height = 15,
+#        units = "cm", 
+#        dpi = "print")
 
 #Stratification by diagnosis --- ---
 
 #For AD
 AD_metadata <- metadata_ind %>% filter(dicho_NIA_reagan == 1)
 dim(AD_metadata)
-#[1] 318  41
+#[1] 594  41
 
 N_AD <- length(unique(AD_metadata$individualID))
-#[1] 318
+#[1] 594
 
 #For no AD
 
 noAD_metadata <- metadata_ind %>% filter(dicho_NIA_reagan == 0)
 dim(noAD_metadata)
-#[1] 588  41
+#[1] 312  41
 
 N_noAD <- length(unique(noAD_metadata$individualID))
-#[1] 588
+#[1] 312
 
 #Distribution of sex
 
@@ -116,8 +116,8 @@ AD_sex <- ggplot(AD_metadata, aes(x = as.factor(msex), fill = as.factor(msex))) 
            labs(
          title = "For AD pathology patients",
          x = "Sex",
-         y = "Count"
-  ) + 
+         y = "Count",
+         fill = "Sex") + 
   annotate("text", x = Inf, y = Inf, label = paste("Total N =", N_AD), hjust = 1, vjust = 1, size = 4) +  # Agregar el total en una esquina
   scale_fill_brewer(palette="Set1") +
   theme_minimal()
@@ -133,7 +133,8 @@ no_ADsex <-  ggplot(noAD_metadata, aes(x = as.factor(msex), fill = as.factor(mse
   geom_text(stat='count', aes(label=..count..), vjust=-0.5) +  
   labs(title = "For no AD pathology patients",
     x = "Sex",
-    y = "Count") +
+    y = "Count", 
+    fill = "Sex") +
   annotate("text", x = Inf, y = Inf, label = paste("Total N =", N_noAD), hjust = 1, vjust = 1, size = 4) +  # Agregar el total en una esquina
   scale_fill_brewer(palette="Set1") +  
   theme_minimal()
@@ -218,7 +219,7 @@ noAD_race <-  ggplot(noAD_metadata, aes(x = as.factor(race), fill = as.factor(ra
 
 grid.arrange(AD_race, noAD_race, ncol = 2)
 
-#Tissue
+#Tissue 
 
 AD_tissue <- ggplot(AD_metadata, aes(x = as.factor(tissue), fill = as.factor(tissue))) +
   geom_bar() +
@@ -226,7 +227,8 @@ AD_tissue <- ggplot(AD_metadata, aes(x = as.factor(tissue), fill = as.factor(tis
   labs(
     title = "For AD pathology patients",
     x = "Tissue",
-    y = "Count") +
+    y = "Count", 
+    fill = "Tissue") +
   scale_fill_brewer(palette="Set1") +  
   theme_minimal()
 
@@ -236,7 +238,8 @@ noAD_tissue <- ggplot(noAD_metadata, aes(x = as.factor(tissue), fill = as.factor
   labs(
     title = "For AD pathology patients",
     x = "Tissue",
-    y = "Count") +
+    y = "Count", 
+    fill = "Tissue") +
   scale_fill_brewer(palette="Set1") +  
   theme_minimal()
 
@@ -340,24 +343,24 @@ dim(metadata_PCC)
 #Save metadata --- --- 
 
 #Metadata for frontal cortex (FC)
-
-#vroom::vroom_write(metadata_FC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/FC//RNA_seq_metadata_FC.txt")
-
-#Metadata for temporal cortex (TC)
-
-#vroom::vroom_write(metadata_TC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/TC/RNA_seq_metadata_TC.txt")
-
-#Metadata Dorsoral Prefrontal Cortex (DLPFC)
-
-#vroom::vroom_write(metadata_DLPFC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_DLPFC.txt")
-
-#Metadata for Head of caudate nucleus (HCN)
-
-#vroom::vroom_write(metadata_HCN, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/HCN//RNA_seq_metadata_HCN.txt")
-
-#Metadata for posterior cingulate cortex (PCC)
-
-#vroom::vroom_write(metadata_PCC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/PCC/RNA_seq_metadata_PCC.txt")
+# 
+# vroom::vroom_write(metadata_FC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/FC/RNA_seq_metadata_FC.txt")
+# 
+# #Metadata for temporal cortex (TC)
+# 
+# vroom::vroom_write(metadata_TC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/TC/RNA_seq_metadata_TC.txt")
+# 
+# #Metadata Dorsoral Prefrontal Cortex (DLPFC)
+# 
+# vroom::vroom_write(metadata_DLPFC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_DLPFC.txt")
+# 
+# #Metadata for Head of caudate nucleus (HCN)
+# 
+# vroom::vroom_write(metadata_HCN, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/HCN//RNA_seq_metadata_HCN.txt")
+# 
+# #Metadata for posterior cingulate cortex (PCC)
+# 
+# vroom::vroom_write(metadata_PCC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/PCC/RNA_seq_metadata_PCC.txt")
 
 #Read expression data, there's 4 count archives --- ---
 
@@ -384,26 +387,22 @@ dim(counts_FC)
 
 #Counts from the temporal cortex
 
-counts_TC <- counts[, (colnames(counts) %in% metadata_TC$specimenID)] %>% 
-  mutate(counts[1], .before = 1)
+counts_TC <- counts[, (colnames(counts) %in% metadata_TC$specimenID)] %>% mutate(counts[1], .before = 1)
 dim(counts_TC)
 #[1] 60607     126
 
 #Counts for Dorsoral Prefrontal Cortex
-counts_DLPFC <- counts[, (colnames(counts) %in% unique(metadata_DLPFC$specimenID))] %>% 
-  mutate(counts[1], .before = 1)
+counts_DLPFC <- counts[, (colnames(counts) %in% unique(metadata_DLPFC$specimenID))] %>% mutate(counts[1], .before = 1)
 dim(counts_DLPFC)
 #[1] 60607   1142
 
 #Counts for  Head of caudate nucleus 
-counts_HCN <- counts[, (colnames(counts) %in% unique(metadata_HCN$specimenID))] %>% 
-  mutate(counts[1], .before = 1)
+counts_HCN <- counts[, (colnames(counts) %in% unique(metadata_HCN$specimenID))] %>% mutate(counts[1], .before = 1)
 dim(counts_HCN)
 #[1] 60607   750
 
 #Counts for posterior cingulate cortex
-counts_PCC <- counts[, c(colnames(counts) %in% metadata_PCC$specimenID)]  %>% 
-  mutate(counts[1], .before = 1)
+counts_PCC <- counts[, c(colnames(counts) %in% metadata_PCC$specimenID)] %>% mutate(counts[1], .before = 1)
 dim(counts_PCC)
 #[1] 60607   672
 
@@ -437,14 +436,22 @@ mapping_counts.p
 
 #Counts for Dorsoral Prefrontal Cortex
 
-#vroom::vroom_write(counts_DLPFC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLPFC/ROSMAP_RNAseq_rawcounts_DLPFC.txt")
+vroom::vroom_write(counts_DLPFC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/full_counts/ROSMAP_RNAseq_rawcounts_DLPFC.txt")
 
 #Counts for  Head of caudate nucleus 
-
-#vroom::vroom_write(counts_HCN, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/HCN/ROSMAP_RNAseq_rawcounts_HCN.txt")
-
-#Counts for posterior cingulate cortex
-
-#vroom::vroom_write(counts_PCC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/PCC/ROSMAP_RNAseq_rawcounts_PCC.txt")
+# 
+# vroom::vroom_write(counts_HCN, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/HCN/ROSMAP_RNAseq_rawcounts_HCN.txt")
+# 
+# #Counts for posterior cingulate cortex
+# 
+# vroom::vroom_write(counts_PCC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/PCC/ROSMAP_RNAseq_rawcounts_PCC.txt")
+# 
+# #Counts for Frontal Cortex
+# 
+# vroom::vroom_write(counts_FC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/FC/ROSMAP_RNAseq_rawcounts_FC.txt")
+# 
+# #Counts for Temporal cortex
+# 
+# vroom::vroom_write(counts_TC, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/TC/ROSMAP_RNAseq_rawcounts_TC.txt")
 
 #END
