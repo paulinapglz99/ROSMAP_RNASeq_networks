@@ -15,13 +15,13 @@ pacman::p_load("tidyverse",
 
 #Get data --- --- 
 
-counts <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/full_counts/ROSMAP_RNAseq_rawcounts_DLPFC.txt")
+counts <- vroom::vroom(file = "ROSMAP_RNAseq_rawcounts_DLPFC.txt")
 dim(counts)
 #[1] 60607  1142 for DLFPC
 
 #Obtain factors from metadata
 
-metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_DLPFC.txt")
+metadata <- vroom::vroom(file = "RNA_seq_metadata_DLPFC.txt")
 dim(metadata)
 #[1] 1141   41 for DLFPC
 
@@ -55,11 +55,11 @@ dim(counts)
 
 #If needed, delete duplicates
 # 
-# # Verificar duplicados en la columna 'feature'
+# #Check duplicates in the column ‘feature’.
 # duplicated_features <- counts$feature[duplicated(counts$feature)]
 # length(duplicated_features)
 # 
-# # Ver las filas duplicadas
+# #View duplicate rows
 # duplicated_rows <- counts[counts$feature %in% duplicated_features, ]
 # dim(duplicated_rows)
 # 
@@ -78,7 +78,7 @@ dim(counts)
 # dim(counts)
 # #[1] 60558  1142
 # 
-# # Convertir las columnas seleccionadas a enteros usando dplyr
+# #Convert selected columns to integers using dplyr
 # counts <- counts %>% mutate(across(-feature, as.integer))
 
 #PCA --- ---
@@ -88,12 +88,12 @@ dim(counts)
 pca_matrix <- counts %>% 
  column_to_rownames("feature") %>% 
   as.matrix() %>% 
-  t()  # transpose the matrix so that rows = samples and columns = variables, this because dots in the PCA scatterplot will be the ones in the rows
+  t()  # transpose the matrix so that rows = samples and columns = variables
 
 # Look at the first 10 rows and first 5 columns of the matrix
 pca_matrix[1:10, 1:10]
 
-# Perform the PCA
+#PCA prcomp
 
 pca <- prcomp(pca_matrix, retx = TRUE, center = TRUE, scale. = FALSE) #slow
 
@@ -101,7 +101,7 @@ pca <- prcomp(pca_matrix, retx = TRUE, center = TRUE, scale. = FALSE) #slow
 
 pca_df <- pca$x %>% as.data.frame() %>% rownames_to_column(var = 'specimenID')
 
-# Create a data frame with PC number and percentage of variance
+#Create a data frame with PC number and percentage of variance
 
 #Note: The percentage of variance is calculated as the squared singular value
 #of each PC divided by the sum of squared singular values, multiplied by 100.
@@ -251,9 +251,9 @@ PC1_PC2_cogdx <- pca_df %>%
 
 #Save plots
 # 
-# ggsave("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/bias_plots/PC1_PC2_batches.png", PC1_PC2, height = 25,  dpi = 300)
-# ggsave("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/bias_plots/PC1_PC3_batches.png", PC1_PC3, height = 25,  dpi = 300)
-# ggsave("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/bias_plots/PC2_PC3_batches.png", PC2_PC3, height = 25,  dpi = 300)
+# ggsave("PC1_PC2_batches.png", PC1_PC2, height = 25,  dpi = 300)
+# ggsave("PC1_PC3_batches.png", PC1_PC3, height = 25,  dpi = 300)
+# ggsave("PC2_PC3_batches.png", PC2_PC3, height = 25,  dpi = 300)
 
 #Loading plot for PC1 --- ---
 
@@ -267,7 +267,7 @@ loading_data_PC1 <- data.frame(feature = names(pca$rotation[, 1]),
 
 loading_data_PC1 <- arrange(loading_data_PC1, PC1_Loadings)
 
-# Extract the smallest value
+#Extract the smallest value
 min(loading_data_PC1$PC1_Loadings)
 which.min(loading_data_PC1$PC1_Loadings)
 
@@ -416,10 +416,10 @@ legend("topright", legend = levels(as.factor(targets$Group)), fill=c("red","blue
 
 #Save metadata
 
-vroom::vroom_write(metadata, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_filtered_DLPFC.txt")
+#vroom::vroom_write(metadata, file ="RNA_seq_metadata_filtered_DLPFC.txt")
 
 #Save counts
 
-vroom::vroom_write(counts, file ="/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/full_counts/ROSMAP_RNAseq_filtered_counts_DLPFC.txt")
+#vroom::vroom_write(counts, file ="ROSMAP_RNAseq_filtered_counts_DLPFC.txt")
 
 #END
