@@ -1,6 +1,6 @@
 # 3.mutual_information_matrix.R
 # Script that calculates mutual information in a discretized matrix from RNA-seq expression data
-# paulinapglz.99@gmail.com
+#
 
 pacman::p_load('future', 
                'tidyverse', 
@@ -10,7 +10,7 @@ pacman::p_load('future',
 # Read data ----------
 args <- commandArgs(trailingOnly = TRUE)
 mat_dis <- args[1]
-output_file <- args[2] # Segundo argumento para el nombre del archivo de salida
+output_file <- args[2] #Second argument for the output file name
 
 mat_dis <- readRDS(mat_dis)
 
@@ -24,19 +24,19 @@ my_index_i <- seq_along(my_index) # index number of my_index
 
 names(my_index_i) <- my_index  # giving names to index
 
-# The dimensions of the number of variables in mat_dis and the vector size must be the same
+#The dimensions of the number of variables in mat_dis and the vector size must be the same
 
-# Set multicore plan --------
+#Set multicore plan --------
 
 plan(multicore, workers = 20)
 
-# Set timer ---- 
+#Set timer ---- 
 
 tempus <- Sys.time()
 
-# Calculate mutual information ------
+#Calculate mutual information ------
 
-# Parallel MI with future_map() and map()
+#Parallel MI with future_map() and map()
 
 MI_MI <- future_map(
   .x = my_index_i,      # named vector where we are going to apply a function .f
@@ -50,11 +50,11 @@ MI_MI <- future_map(
       })
   }, .progress = TRUE)
 
-# Print time ----
+#Print time ----
 print(Sys.time() - tempus)
 
-# Write matrix ----
+#Write matrix ----
 
-saveRDS(MI_MI, output_file) # Usar el argumento para el nombre del archivo de salida
+saveRDS(MI_MI, output_file)
 
-# Next script is the 3.1.rds_to_matrix.R
+#END

@@ -97,7 +97,7 @@ enrichment_fullnet_AD_dot <- dotplot(enrichment_fullnet_AD)
 
 #Save plots
 
-ggsave("enrichment_fullnet_AD_cnet.png", enrichment_fullnet_AD_cnet, width = 15, height = 8)
+#ggsave("enrichment_fullnet_AD_cnet.png", enrichment_fullnet_AD_cnet, width = 15, height = 8)
 
 #For noAD graph
 
@@ -167,7 +167,7 @@ for (i in seq_along(graphLists)) {
 
 #Save graphs  --- ----
 
-# Loop through each graph and export it with community membership as GraphML
+#Loop through each graph and export it with community membership as GraphML
 for (i in seq_along(graphLists)) {
   # Generate filename for each graph (e.g., graphAD.graphml, graphnoAD.graphml)
   graph_name <- ifelse(i == 1, "graphAD", "graphnoAD")
@@ -179,45 +179,42 @@ for (i in seq_along(graphLists)) {
 
 #If you already have the networks
 
-graphAD <- read_graph(file =  '~/redesROSMAP/graphADnodes_membership.graphml',
+graphAD <- read_graph(file =  'graphADnodes_membership.graphml',
                       format = 'graphml')
 
-graphnoAD <- read_graph(file = '~/redesROSMAP/graphnoADnodes_membership.graphml',
+graphnoAD <- read_graph(file = 'graphnoADnodes_membership.graphml',
                         format = 'graphml')
 
-universe <- scan(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/universe.txt", what = character())
+universe <- scan(file = "universe.txt", what = character())
 
 #Save graphs in a list
 
 graphLists <- list(graphAD = graphAD,
                    graphnoAD = graphnoAD)
 
-# Extract list of nodes by community for each graph
-
-# Extraer los nodos por comunidad para cada grafo
+#Extract list of nodes by community for each graph
 nodes_by_community_list <- lapply(graphLists, function(graph) {
   split(V(graph)$name, V(graph)$community)
 })
 
-# Extraer módulos para ambos grafos
+#Extract modules for both graphs
 modules_AD <- nodes_by_community_list[[1]]
 modules_noAD <- nodes_by_community_list[[2]]
 
-# Crear matriz de similitud
+#Create empty matrix
 similarity_matrix <- matrix(0, nrow = length(modules_AD), ncol = length(modules_noAD))
 
-# Rellenar matriz con índices Jaccard
+#Fill matrix with jaccard inndex
 for (i in seq_along(modules_AD)) {
   for (j in seq_along(modules_noAD)) {
     similarity_matrix[i, j] <- jaccard_index(modules_AD[[i]], modules_noAD[[j]])
   }
 }
 
-# Nombrar filas y columnas
+#Name rows and columns
 rownames(similarity_matrix) <- paste0("AD_", seq_along(modules_AD))
 colnames(similarity_matrix) <- paste0("Control_", seq_along(modules_noAD))
 
-# Visualizar la matriz de similitud
 similarity_matrix
 dim(similarity_matrix)
 #[1] 68 71
@@ -232,27 +229,25 @@ length(similarity_matrix[similarity_matrix == 1])
 length(similarity_matrix[similarity_matrix > 0.5])
 #[1] 24
  
-# Buscar posiciones de valores iguales a 1
+#Positions equal to 1
 pairs_with_one <- which(similarity_matrix == 1, arr.ind = TRUE)
 dim(pairs_with_one)
 #[1] 10  2
 
-# Crear dataframe con los nombres de los módulos correspondientes
+#Dataframe with correspondent modules
 module_pairs <- data.frame(
   module_AD = rownames(similarity_matrix)[pairs_with_one[, "row"]],
   module_noAD = colnames(similarity_matrix)[pairs_with_one[, "col"]]
 )
 
-# Imprimir el dataframe corregido
-print(module_pairs)
-
 #Create heatmap
-# Convertimos la matriz en un formato largo
+
+#Long format for ggplot
 
 sim_heatmap.df <- as.data.frame(as.table(similarity_matrix)) %>%
   rename(Var1 = "module_AD", Var2 = "module_noAD", Freq = "similarity")
 
-# Crear el heatmap
+#Plot heatmap
 sim_heatmap.p <- tidyheatmap(
   df = sim_heatmap.df,
   rows = module_AD,
@@ -280,10 +275,7 @@ sim_heatmap.p
 #Calculate assortativity by module --- ---
 
 assortativity_modules <- lapply(graphLists, function(graph) {
-  # Obtener nodos por comunidad
   nodes_by_community <- split(V(graph)$name, V(graph)$community)
-  
-  # Calcular la asortatividad para cada módulo
   sapply(nodes_by_community, function(nodes) {
     calculate_assortativity(graph, nodes)
   })
@@ -319,12 +311,10 @@ sd(assortativity_modules$graphAD, na.rm = TRUE)
 
 sd(assortativity_modules$graphnoAD, na.rm = TRUE)
 
-
-
 #T test
 
 t_test <- t.test(assortativity_modules$graphAD, assortativity_modules$graphnoAD,
-                 var.equal = T)  # var.equal = FALSE para varianzas desiguales
+                 var.equal = T)  # var.equal = FALSE for unequal variances
 t_test
 
 
@@ -335,40 +325,39 @@ library(ggpubr)
 assortativity_AD.p <- ggdotchart(assortativity__AD, 
            x = "name", 
            y = "value",
-          # color = "name",                                # Color por grupos (opcional)
-          # palette = "blue",                              # Paleta personalizada
-           sorting = "descending",                        # Ordenar en orden descendente
-           rotate = TRUE,                                 # Rotar verticalmente
-           dot.size = 3,                                  # Tamaño de los puntos
-           y.text.col = FALSE,                            # No colorear el texto del eje y
-           ggtheme = theme_pubr()                         # Tema de ggplot2
+          # color = "name",                         
+          # palette = "blue",                       
+           sorting = "descending",                  
+           rotate = TRUE,                           
+           dot.size = 3,                            
+           y.text.col = FALSE,                      
+           ggtheme = theme_pubr()                   
 ) +
   theme(legend.position = "none") +
   scale_y_continuous(breaks = seq(floor(min(assortativity__AD$value)), 
                                   ceiling(max(assortativity__AD$value)), 
                                   by = 0.1)) +
   ggtitle("Assortativity per module", "in AD network") +
-  theme_cleveland()                                       # Agregar rejillas punteadas
+  theme_cleveland()                                     
   
 assortativity_control.p <- ggdotchart(assortativity__control, 
                                  x = "name", 
                                  y = "value",
-                                # color = "name",                                # Color por grupos (opcional)
-                                 # palette = "blue",                              # Paleta personalizada
-                                 sorting = "descending",                        # Ordenar en orden descendente
-                                 rotate = TRUE,                                 # Rotar verticalmente
-                                 dot.size = 3,                                  # Tamaño de los puntos
-                                 y.text.col = FALSE,                            # No colorear el texto del eje y
-                                 ggtheme = theme_pubr()                         # Tema de ggplot2
-) +
+                                # color = "name",                                
+                                 # palette = "blue",                             
+                                 sorting = "descending",                        
+                                 rotate = TRUE,                               
+                                 dot.size = 3,                                
+                                 y.text.col = FALSE,                          
+                                 ggtheme = theme_pubr()) +
   ggtitle("Assortativity per module", "in control network") +
   theme(legend.position = "none") +
   scale_y_continuous(breaks = seq(floor(min(assortativity__control$value)), 
                                   ceiling(max(assortativity__control$value)), 
                                   by = 0.1)) +
-  theme_cleveland()                                       # Agregar rejillas punteadas
+  theme_cleveland() 
 
-#grid both plots
+#Grid both plots
 
 assortativity_grid <- cowplot::plot_grid(assortativity_AD.p, assortativity_control.p,
                    align = "h", axis = "tb", labels = "auto",
@@ -384,7 +373,7 @@ assortativity_grid <- cowplot::plot_grid(assortativity_AD.p, assortativity_contr
 #     dpi = 300
 #   )
 
-# Combine the two datasets
+#Combine the two datasets
 assortativity_df <- bind_rows(assortativity__AD, assortativity__control)
 
 assortativity_viol <- ggplot(assortativity_df, aes(x = group, y = value, fill = group)) +
@@ -581,11 +570,11 @@ funciones_ad <- sapply(modulos_ad, function(mod) {
   if (!is.null(enriched_results_AD[[mod]]@result$Description[1])) {
     enriched_results_AD[[mod]]@result$Description[1]  # Obtener la función principal
   } else {
-    "Not enriched"  # Asignar un valor predeterminado si el resultado es NULL
+    "Not enriched" 
   }
 })
 
-# Construir el data frame
+#Build dataframe
 tabla_modulos <- data.frame(
   Modulo = paste0("AD_", modulos_ad),
   Module_main_function = funciones_ad,
@@ -593,13 +582,13 @@ tabla_modulos <- data.frame(
 )
 tabla_modulos$membership <- gsub("AD_", "", tabla_modulos$Modulo)
 
-# Generar un gráfico circular
+#Circular plot
 
 library(circlize)
 
 module_descriptions <- sapply(enriched_results_AD, function(res) res@result$Description[1])
 
-# Crear la matriz de similitud usando jaccard_simplex
+#Create similarity matrix using jaccard_simplex
 num_modules <- length(geneSets_AD)
 jaccard_matrix <- matrix(0, nrow = num_modules, ncol = num_modules,
                          dimnames = list(module_descriptions, module_descriptions))
@@ -618,7 +607,7 @@ circlize_dendrogram(hc,
                     labels_track_height = NA,
                     dend_track_height = 0.5)
 
-dist_matrix <- as.dist(1 - similarity_matrix)  # Convertir similitud a distancia
+dist_matrix <- as.dist(1 - similarity_matrix)  #Convert similarity to distance
 clustering <- hclust(dist_matrix, method = "ward.D2")
 
 ################################################################################
@@ -631,7 +620,7 @@ library(ggsankeyfier)
 
 #Get hub genes 
 
-hub_genes <- scan("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/AD_hubs_notcontrolens.txt",
+hub_genes <- scan("AD_hubs_notcontrolens.txt",
                   what = character())
 
 hub_genes.x <- nodes_membership_AD.df %>% filter(ensembl_gene_id %in% hub_genes)
@@ -655,7 +644,7 @@ hub_genes.x$external_gene_name <- as.factor(hub_genes.x$external_gene_name)
 hub_genes.x$Module_main_function <- as.factor(hub_genes.x$Module_main_function)
 hub_genes.x$membership <- as.factor(hub_genes.x$membership)
 
-# Convierte la tabla al formato largo necesario para ggsankey
+#Convert the table to the long format needed for ggsankey
 
 hub_genes_long <- hub_genes.x %>%
   make_long(membership, external_gene_name, Module_main_function)
@@ -692,7 +681,7 @@ allu_hubs <- ggplot(data = hub_genes.x,
 
 #In which modules are found our high betweeness genes?--- ---
 
-high_be_genes <-  scan(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/AD_highbe_notcontrol_ens.txt',   what = character())
+high_be_genes <-  scan(file = 'AD_highbe_notcontrol_ens.txt',   what = character())
 
 high_be_genes.x <- nodes_membership_AD.df %>% filter(ensembl_gene_id %in% high_be_genes)
 
@@ -723,7 +712,7 @@ high_be_genes.x$external_gene_name <- as.factor(high_be_genes.x$external_gene_na
 high_be_genes.x$Module_main_function <- as.factor(high_be_genes.x$Module_main_function)
 high_be_genes.x$membership <- as.factor(high_be_genes.x$membership)
 
-#onvierte la tabla al formato largo necesario para ggsankey
+#Convert the table to the long format needed for ggsankey
 highbe_genes_long <- high_be_genes.x %>%
   make_long(membership, external_gene_name, Module_main_function)
 
@@ -759,38 +748,33 @@ allu_highbe <- ggplot(data = high_be_genes.x,
 
 sankeys <- grid.arrange(sankey_hubs, sankey_highbe, ncol = 2)
 
-
-ggsave("~/DLPFC_paper_plots/sankeys_hubs_highs.jpg", 
-       sankeys, device = "jpg", 
-       height = 10, 
-       width = 15, 
-       units = "in", 
-       dpi = 300
-        )
+# 
+# ggsave("~/DLPFC_paper_plots/sankeys_hubs_highs.jpg", 
+#        sankeys, device = "jpg", 
+#        height = 10, 
+#        width = 15, 
+#        units = "in", 
+#        dpi = 300
+#         )
 
 
 ################################################################################
 
-#TABLE
-
-# Función para contar genes y procesos enriquecidos
+#Function for counting genes and enriched processes
 count_genes_and_processes <- function(enrichment_results) {
-  # Lista para almacenar los resultados
+ 
   results_summary <- list()
   
   for (i in seq_along(enrichment_results)) {
-    # Obtener el número de genes (esto asume que cada elemento tiene una lista de genes)
-    num_genes <- length(enrichment_results[[i]]@gene)
+      num_genes <- length(enrichment_results[[i]]@gene)
     
-    # Número de procesos enriquecidos (filtrados por pvalue significativo)
-    if (nrow(enrichment_results[[i]]) > 0) {
+      if (nrow(enrichment_results[[i]]) > 0) {
       num_processes <- nrow(enrichment_results[[i]]@result[enrichment_results[[i]]@result$pvalue < 0.05, ])
     } else {
       num_processes <- 0
     }
     
-    # Almacenar el resultado por comunidad
-    results_summary[[i]] <- list(
+     results_summary[[i]] <- list(
       "num_genes" = num_genes,
       "num_processes" = num_processes
     )
@@ -798,14 +782,14 @@ count_genes_and_processes <- function(enrichment_results) {
   return(results_summary)
 }
 
-# Resumen de enriquecimiento para AD y noAD
+# Enrichment summary for AD and non-AD
 summary_AD <- count_genes_and_processes(enriched_results_AD)
 summary_noAD <- count_genes_and_processes(enriched_results_noAD)
 
 communities_AD <- names(nodes_by_community_AD)
 communities_noAD <- names(nodes_by_community_noAD)
 
-# Convertir los resultados a un data frame
+#As data frames
 df_AD <- data.frame(
   Community = communities_AD,
   Category = "AD",
@@ -821,14 +805,14 @@ df_noAD <- data.frame(
   Number_of_Enriched_Processes = sapply(summary_noAD, function(x) x$num_processes)
 )
 
-# Combinar ambas tablas en una sola
+#merge tables
 df_summary <- bind_rows(df_AD, df_noAD)
 
 #Number of modules associated to a given biological function --- ---
 
 #3.In how many modules is represented each biological process?
 
-# Extraer los términos GO para cada módulo en AD
+#Extract GO terms for each module in AD
 BP_terms_AD <- lapply(enriched_results_AD, function(result) {
   if (length(result@result) > 0) {
     return(result@result$Description)  # Extraer nombres de procesos biológicos
@@ -837,7 +821,7 @@ BP_terms_AD <- lapply(enriched_results_AD, function(result) {
   }
 })
 
-# Extraer los términos GO para cada módulo en noAD
+#Extract GO terms for each module in noAD
 BP_terms_noAD <- lapply(enriched_results_noAD, function(result) {
   if (length(result@result) > 0) {
     return(result@result$Description)
@@ -846,22 +830,22 @@ BP_terms_noAD <- lapply(enriched_results_noAD, function(result) {
   }
 })
 
-# Contar cuántos módulos están asociados a cada proceso biológico en AD
+#Count how many modules are associated with each biological process in AD.
 BP_count_AD <- table(unlist(BP_terms_AD)) %>% as.data.frame()
 colnames(BP_count_AD) <- c("term", "in_modules_AD")
 
-# Contar cuántos módulos están asociados a cada proceso biológico en noAD
+#Count how many modules are associated with each biological process in control
 BP_count_noAD <- table(unlist(BP_terms_noAD)) %>% as.data.frame()
 colnames(BP_count_noAD) <- c("term", "in_modules_noAD")
 
-# Unificar los términos de procesos biológicos de ambas redes
+#Unify the terms of biological processes of both networks.
 all_BP_terms <- BP_count_AD %>% left_join(BP_count_noAD, by = "term")
 all_BP_terms[is.na(all_BP_terms)] <- 0  # Reemplazar NA por 0
-# Calcular la diferencia absoluta entre AD y noAD
+#absolute difference
 all_BP_terms <- all_BP_terms %>%
   mutate(difference = abs(in_modules_AD - in_modules_noAD))
 
-#Distribucion completa
+#Plot
 
 ggplot(all_BP_terms, aes(x = difference)) +
   geom_histogram(binwidth = 1, fill = "cadetblue", color = "black", alpha = 0.6) +  # Bins más pequeños
@@ -899,7 +883,8 @@ all_diff_BP_terms.p <- ggplot(all_BP_terms, aes(x = reorder(term, difference))) 
   scale_fill_manual(values = c("AD" = "red", "control" = "blue"))  # Colores personalizados
 all_diff_BP_terms.p
 
-# Seleccionar los 50 términos con la mayor diferencia
+#Select the 50 terms with the biggest difference 
+
 top_diff_BP_terms <- all_BP_terms %>%
   arrange(desc(difference)) %>%
   head(50)
@@ -920,19 +905,17 @@ diff_BP_terms.p
 
 #Save plot
 
-ggsave(filename = "diff_BP_terms.jpg",
-       plot = diff_BP_terms.p,
-       device = "jpg", width = 25,
-       height = 20, units = "cm",dpi = 300)
+# ggsave(filename = "diff_BP_terms.jpg",
+#        plot = diff_BP_terms.p,
+#        device = "jpg", width = 25,
+#        height = 20, units = "cm",dpi = 300)
 
-# Asumamos que tienes un objeto llamado 'enriched_results' con los procesos enriquecidos
-
-# Generar una lista con las conexiones entre módulos y procesos GO
+#Generate a list of connections between modules and GO processes
 network_edges <- data.frame()
 
 for (i in seq_along(enriched_results_AD)) {
-  module_name <- names(nodes_by_community_AD)[i]  # Nombre de la comunidad o módulo
-  go_terms <- enriched_results_AD[[i]]@result$ID  # Procesos GO significativos para esa comunidad
+  module_name <- names(nodes_by_community_AD)[i]  #Module name
+  go_terms <- enriched_results_AD[[i]]@result$ID  #Go terms
   
   if (length(go_terms) > 0) {
     for (go in go_terms) {
@@ -944,14 +927,10 @@ for (i in seq_along(enriched_results_AD)) {
 #Create graph object from our network
 g <- graph_from_data_frame(network_edges, directed = FALSE)
 
-# Agregar propiedades a los nodos: si es un módulo o un GO term
+#Adding properties to nodes: whether it is a module or a GO term
 V(g)$type <- ifelse(V(g)$name %in% names(nodes_by_community_AD), "Module", "GO Term")
 
-# Colores para módulos y GO terms
-module_color <- "dodgerblue"  # Color para módulos
-go_color <- "orange"          # Color para GO terms
-
-# Crear el gráfico
+#Plot
 ggraph(g, layout = "fr") +  # Fruchterman-Reingold layout para redes
   geom_edge_link(aes(edge_alpha = 0.5), color = "gray", show.legend = FALSE) +  # Enlaces
   geom_node_point(aes(color = V(g)$type), size = 5) +  # Nodos
@@ -960,10 +939,7 @@ ggraph(g, layout = "fr") +  # Fruchterman-Reingold layout para redes
   theme_void() +  # Sin fondo
   theme(legend.position = "none")  # Sin leyenda
 
-# Si ya tienes los datos de enriquecimiento para cada módulo, puedes ordenarlos por número de genes o procesos
-# Supongamos que summary_AD y summary_noAD ya contienen el conteo de genes y procesos enriquecidos como antes
-
-# Crear un data frame que contenga la información sobre los módulos y sus genes/procesos
+#Create a data frame containing information about the modules and their genes/processes.
 df_AD <- data.frame(
   Module = names(nodes_by_community_AD),
   Number_of_Genes = sapply(summary_AD, function(x) x$num_genes),
@@ -976,21 +952,21 @@ df_noAD <- data.frame(
   Number_of_Enriched_Processes = sapply(summary_noAD, function(x) x$num_processes)
 )
 
-# Ordenar por número de procesos enriquecidos o número de genes
+#Keeping the first 20 modules of each network
 df_AD <- df_AD[order(-df_AD$Number_of_Enriched_Processes), ]
 df_noAD <- df_noAD[order(-df_noAD$Number_of_Enriched_Processes), ]
 
-# Quedarse con los primeros 20 módulos de cada red
-top_modules_AD <- df_AD[1:5, ]
-top_modules_noAD <- df_noAD[1:5, ]
+#Only top 20
+top_modules_AD <- df_AD[1:20, ]
+top_modules_noAD <- df_noAD[1:20, ]
 
-# Filtrar los resultados de enriquecimiento para los top módulos
+#Generate a list of connections between filtered modules and GO processes
 filtered_enrichment_AD <- enriched_results_AD[names(enriched_results_AD) %in% top_modules_AD$Module]
 filtered_enrichment_noAD <- enriched_results_noAD[names(enriched_results_noAD) %in% top_modules_noAD$Module]
-# Generar una lista con las conexiones entre módulos filtrados y procesos GO
+#Generate a list of connections between filtered modules and GO processes
 network_edges_filtered <- data.frame()
 
-# Para AD
+#For AD
 for (i in seq_along(filtered_enrichment_AD)) {
   module_name <- names(filtered_enrichment_AD)[i]  # Nombre de la comunidad o módulo
   go_terms <- filtered_enrichment_AD[[i]]@result$ID  # Procesos GO significativos para esa comunidad
@@ -1002,7 +978,7 @@ for (i in seq_along(filtered_enrichment_AD)) {
   }
 }
 
-# Para noAD (control)
+#For control
 for (i in seq_along(filtered_enrichment_noAD)) {
   module_name <- names(filtered_enrichment_noAD)[i]  # Nombre de la comunidad o módulo
   go_terms <- filtered_enrichment_noAD[[i]]@result$ID  # Procesos GO significativos para esa comunidad
@@ -1017,14 +993,16 @@ for (i in seq_along(filtered_enrichment_noAD)) {
 #Filtered graph
 g_filtered <- graph_from_data_frame(network_edges_filtered, directed = FALSE)
 
-# Agregar propiedades a los nodos: si es un módulo o un GO term
+#Add 
 V(g_filtered)$type <- ifelse(V(g_filtered)$name %in% c(top_modules_AD$Module, top_modules_noAD$Module), "Module", "GO Term")
 
-# Visualización usando ggraph (ver los pasos anteriores para detalles de visualización)
-ggraph(g_filtered, layout = "fr") +  # Fruchterman-Reingold layout para redes
-  geom_edge_link(aes(edge_alpha = 0.5), color = "gray", show.legend = FALSE) +  # Enlaces
-  geom_node_point(aes(color = V(g_filtered)$type), size = 5) +  # Nodos
-  geom_node_text(aes(label = V(g_filtered)$name), repel = TRUE, size = 3) +  # Etiquetas
-  scale_color_manual(values = c("Module" = module_color, "GO Term" = go_color)) +  # Asignar colores
-  theme_void() +  # Sin fondo
-  theme(legend.position = "none")  # Sin leyenda
+#plot
+
+ggraph(g_filtered, layout = "fr") +  
+  geom_edge_link(aes(edge_alpha = 0.5), color = "gray", show.legend = FALSE) +  
+  geom_node_point(aes(color = V(g_filtered)$type), size = 5) + 
+  geom_node_text(aes(label = V(g_filtered)$name), repel = TRUE, size = 3) +  #
+  scale_color_manual(values = c("Module" = module_color, "GO Term" = go_color)) +  
+  theme_void() +  
+  theme(legend.position = "none") 
+#END

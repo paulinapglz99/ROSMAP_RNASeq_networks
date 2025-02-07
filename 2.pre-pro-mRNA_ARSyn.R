@@ -126,29 +126,29 @@ pca <- function(counts, factors, title = "PCA Scatterplot coloured by sequencing
 
 # #Read counts data, this was already filtered by 1.QC_pre_analysis.R
 # 
-# counts <- readRDS(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/full_counts/ROSMAP_RNAseq_rawcounts_DLPFC.rds') %>%
+# counts <- readRDS(file = 'ROSMAP_RNAseq_rawcounts_DLPFC.rds') %>%
 #   as.data.frame()
 # dim(counts)
 # 
 # #Obtain factors from metadata --- --- 
 # 
-# metadata <- vroom::vroom(file = "/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/metadata/DLPFC/RNA_seq_metadata_DLPFC.txt")
+# metadata <- vroom::vroom(file = "RNA_seq_metadata_DLPFC.txt")
 # dim(metadata)
 
-#Fix metadata
-cat("Fix metadata")
-metadata <- as.data.frame(metadata)
-
-metadata <- homogenize_exclude(metadata)
-
-#Replace msex with sex
-names(metadata) <- ifelse(names(metadata) == "msex", "sex", names(metadata))
-
-#Exclude specimens by metadata
-
-metadata <- metadata %>% filter(exclude == FALSE)
-metadata <- metadata %>% filter(if_all(c(dicho_NIA_reagan, sex), ~ !is.na(.)))
-dim(metadata)
+# #Fix metadata
+# cat("Fix metadata")
+# metadata <- as.data.frame(metadata)
+# 
+# metadata <- homogenize_exclude(metadata)
+# 
+# #Replace msex with sex
+# names(metadata) <- ifelse(names(metadata) == "msex", "sex", names(metadata))
+# 
+# #Exclude specimens by metadata
+# 
+# metadata <- metadata %>% filter(exclude == FALSE)
+# metadata <- metadata %>% filter(if_all(c(dicho_NIA_reagan, sex), ~ !is.na(.)))
+# dim(metadata)
 
 #Fix counts
 cat("Fix counts")

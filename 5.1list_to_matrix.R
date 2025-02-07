@@ -1,7 +1,7 @@
 #
 #3.rds_to_matrix.R
 #Script to convert RDS file to matrix and equal diagonal MI matrix to 0
-#Script by Aidee Lashmi and paulinapglz.99@gmail.com
+#Script by Aidee Lashmi and APPG
 
 #libraries --- ---
 
@@ -13,7 +13,7 @@ pacman::p_load("tidyverse",
 
 #slow
 
-mi_list <- readRDS("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/oldthings/ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds")
+mi_list <- readRDS("ROSMAP_DLFPC_RNAseq_MutualInfo_AD_NIA_Reagan_dicho.rds")
 # 
 # args <- commandArgs(trailingOnly = TRUE)
 # mi_list <- args[1]
@@ -24,17 +24,17 @@ mi_list <- readRDS("/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/
 rows <- names(mi_list)
 columns <- unique(unlist(lapply(mi_list, names)))
 
-# Create an empty matrix
+#Create an empty matrix
 coexpre_mat <- matrix(0, nrow = length(rows), ncol = length(columns))
 rownames(coexpre_mat) <- rows
 colnames(coexpre_mat) <- columns
 
-# Fill matrix with unnesting values
+#Fill matrix with unnesting values
 for (i in seq_along(mi_list)) {
   coexpre_mat[i, names(mi_list[[i]])] <- unlist(mi_list[[i]])
 }
 
-# Convertir a matriz
+#Convert to matrix
 coexpre_mat <- as.matrix(coexpre_mat)
 
 #If the diagonal of the matrix does not have the same values, we must verify

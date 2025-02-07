@@ -10,9 +10,9 @@ pacman::p_load('dplyr',
 
 #Get ddata --- ---
 
-metrics_AD <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/metrics_percentiles_normalizedMI_AD_ROSMAP_RNAseq_DLFPC_MutualInfo_NIA_Reagan_dicho.txt')
+metrics_AD <- vroom::vroom(file = 'graphs_NIA_Reagan/metrics_percentiles_normalizedMI_AD_ROSMAP_RNAseq_DLFPC_MutualInfo_NIA_Reagan_dicho.txt')
 
-metrics_noAD <- vroom::vroom(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/metrics_percentiles_normalizedMI_noAD_ROSMAP_RNAseq_DLFPC_MutualInfo_NIA_Reagan_dicho.txt')
+metrics_noAD <- vroom::vroom(file = 'graphs_NIA_Reagan/metrics_percentiles_normalizedMI_noAD_ROSMAP_RNAseq_DLFPC_MutualInfo_NIA_Reagan_dicho.txt')
 
 #Manage data --- ---
 
@@ -185,7 +185,7 @@ per_genes_max_size_plot <- ggplot(metrics, aes(x = percentile, y = percentage_ge
         axis.text = element_text(size = 12),
         axis.text.x = element_text(angle = 45, hjust = 1))
 
-#Arrange in a grid for presentation
+#Arrange in a grid for presentation ---- ----
 
 grid <- grid.arrange(v_plot, E_plot, 
              components_plot, clusteringcoe_plot,
@@ -193,14 +193,13 @@ grid <- grid.arrange(v_plot, E_plot,
              max_comp_size_plot, per_genes_max_size_plot, 
              components_INFOMAP_plot,
              ncol = 3)
-
-ggsave(filename = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/network_characteristics_bypercentile.jpg',
-       plot = grid,  # Esto asume que el último gráfico generado es el que quieres guardar
-       width = 30,
-       height = 15,
-       units = "in",
-       dpi = 600,
-       pointsize = 4)
-
+# 
+# ggsave(filename = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/network_characteristics_bypercentile.jpg',
+#        plot = grid,
+#        width = 30,
+#        height = 15,
+#        units = "in",
+#        dpi = 600,
+#        pointsize = 4)
 
 #END

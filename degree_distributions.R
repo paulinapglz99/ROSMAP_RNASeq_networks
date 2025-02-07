@@ -31,11 +31,9 @@ set.seed(10)
 
 #Get data --- --- 
 
-graphAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/
-                      graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99_trad.graphml', format = 'graphml')
+graphAD <- read_graph(file = 'ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99_trad.graphml', format = 'graphml')
 
-graphnoAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/
-                        graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99_trad.graphml', format = 'graphml')
+graphnoAD <- read_graph(file = 'ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99_trad.graphml', format = 'graphml')
 
 
 #Save graphs in a list
@@ -193,10 +191,10 @@ log_log_combined
 #        dpi = 300,
 # )
 
-#Prueba de significancia estadistica
-#Son mis distribuciones significativamente diferentes?
+#Statistical significance test
+#Are my distributions significantly different?
 
-# Crear funciones de distribución acumulativa
+#Create cumulative distribution functions
 AD_CDF <- approxfun(ADdegree_freq$degree, ADdegree_freq$CDF, method = "linear", yleft = 0, yright = 1)
 noAD_CDF <- approxfun(noADdegree_freq$degree, noADdegree_freq$CDF, method = "linear", yleft = 0, yright = 1)
 ks_result <- ks.test(AD_CDF(ADdegree_freq$degree), noAD_CDF(noADdegree_freq$degree))
@@ -242,13 +240,13 @@ degree_distr_x.p
 
 library(cowplot)
 
-# Convertir el gráfico secundario a un objeto gráfico
+#convert the secondary graphic to a graphic object
 degree_inset <- ggdraw() +
-  draw_plot(log_log_combined) +  # Main plot
+  draw_plot(log_log_combined) +  #Main plot
   draw_plot(degree_distr_x.p, 
             x = 0.4, y = 0.68, 
             width = 0.6,
-            height = 0.3)  # Inset plot with positioning
+            height = 0.3)  #Inset plot with positioning
 degree_inset
 
 #Save
@@ -334,17 +332,12 @@ k_pk_grid <- grid.arrange(k_logpk_AD, k_logpk_noAD, ncol =2)
 
 panel <- grid.arrange(log_log_combined, degree_distr_x.p, ncol = 2)
 
-ggsave(filename = "panel_loglog_accum_distr.jpg",
-       plot = panel,
-       width = 50,
-       height = 25,
-       units = "cm",
-       dpi = 300,
-)
-
-#But now...
-
-
-
+# ggsave(filename = "panel_loglog_accum_distr.jpg",
+#        plot = panel,
+#        width = 50,
+#        height = 25,
+#        units = "cm",
+#        dpi = 300,
+# )
 
 #END

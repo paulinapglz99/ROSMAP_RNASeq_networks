@@ -39,9 +39,9 @@ jaccard_nodes <- function(g1,g2){
 
 #Get data --- --- 
 
-graphAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+graphAD <- read_graph(file = 'graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
 
-graphnoAD <- read_graph(file = '/datos/rosmap/data_by_counts/ROSMAP_counts/counts_by_tissue/DLFPC/counts_by_NIA_Reagan/graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+graphnoAD <- read_graph(file = 'graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
 
 #Save graphs in a list
 
@@ -50,22 +50,22 @@ graphLists <- list(graphAD = graphAD,
 
 #Network topological comparison --- --- 
 
-# Extraer los nombres de los nodos de cada red
+#Extract the names of the nodes in each network
 nodes_AD <- V(graphAD)$name
 nodes_noAD <- V(graphnoAD)$name
 
-# Encontrar los nodos comunes
+#Finding common nodes
 common_nodes <- intersect(nodes_AD, nodes_noAD)
 num_common_nodes <- length(common_nodes)
 
-# Calcular el porcentaje de coincidencia respecto a cada red
+#Calculate the percentage of coincidence with respect to each network
 percent_common_AD <- (num_common_nodes / length(nodes_AD)) * 100
 percent_common_noAD <- (num_common_nodes / length(nodes_noAD)) * 100
 
-# Imprimir resultados
-cat("Número de nodos en común:", num_common_nodes, "\n")
-cat("Porcentaje de nodos en común en la red g1:", percent_common_AD, "%\n")
-cat("Porcentaje de nodos en común en la red g2:", percent_common_noAD, "%\n")
+#Print results
+cat("Number of nodes in common:", num_common_nodes, "\n")
+cat("Percentage of nodes in common in network g1:", percent_common_AD, "%\n")
+cat("Percentage of nodes in common in network g2:", percent_common_noAD, "%\n")
 
 jaccard_nodes(graphAD, graphnoAD)
 
@@ -81,7 +81,6 @@ diameter
 max(components(graphAD)$csize)
 
 max(components(graphnoAD)$csize)
-
 
 #Eigenvector centrality of the network --- ---
 
@@ -104,11 +103,11 @@ clustering_coefficient
 infomap_modularity <- sapply(X = graphLists, FUN = cluster_infomap)
 infomap_modularity
 
-# Extract information from the modules
+#Extract information from the modules
 
 membership_modularity <- sapply(X = infomap_modularity, FUN = membership)
 
-# Assign the modules as attributes of the vertices
+#Assign the modules as attributes of the vertices
 
 V(graphAD)$modules <- membership_modularity[[1]]
 
@@ -126,7 +125,7 @@ ADnodes <- V(graphAD)
 
 noADnodes <- V(graphnoAD)
 
-# Find elements in noADnodes but not in ADnodes
+#Find elements in noADnodes but not in ADnodes
 missing_elements_in_ADnodes <- setdiff(names(noADnodes), names(ADnodes))
 missing_elements_in_ADnodes <- as.list(missing_elements_in_ADnodes)
 names(missing_elements_in_ADnodes) <- missing_elements_in_ADnodes
@@ -184,7 +183,7 @@ for (i in 1:length(graphLists)) {
   infomap_modularity[[i]] <- cluster_infomap(graph = graphLists[[i]], e.weights = graphLists[[i]]$mut_info_norm)
 }
 
-# Extract information from the modules
+#Extract information from the modules
 
 graphAD_plus_modu <- cluster_infomap(graphAD_plus, e.weights = graphAD_plus$mut_info_norm)
 

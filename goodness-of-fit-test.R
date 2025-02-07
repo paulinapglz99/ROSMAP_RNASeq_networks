@@ -1,4 +1,4 @@
-# Script de prueba de bondad de ajuste
+#Goodness-of-fit test script
 #paulinapglz.99@gmail.com
 
 pacman::p_load("dplyr", 
