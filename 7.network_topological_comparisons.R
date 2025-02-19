@@ -39,9 +39,9 @@ jaccard_nodes <- function(g1,g2){
 
 #Get data --- --- 
 
-graphAD <- read_graph(file = 'graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+graphAD <- read_graph(file = 'ROSMAP_RNAseq_DLPFC_AD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
 
-graphnoAD <- read_graph(file = 'graphs_NIA_Reagan/ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
+graphnoAD <- read_graph(file = 'ROSMAP_RNAseq_DLPFC_noAD_MutualInfograph_percentile99.99.graphml', format = 'graphml')
 
 #Save graphs in a list
 
@@ -82,6 +82,10 @@ max(components(graphAD)$csize)
 
 max(components(graphnoAD)$csize)
 
+#Centrality of the network --- ---
+
+centralizations <- sapply(graphLists, function(g) centr_degree(g)$centralization)
+
 #Eigenvector centrality of the network --- ---
 
 eigen <- sapply(graphLists, FUN = eigen_centrality)
@@ -91,6 +95,8 @@ eigen
 # vector  numeric,1113 numeric,1074
 # value   178.6451     187.1376    
 # options list,20      list,20 
+
+
 
 #Calculate clustering coefficient of both networks ---- ---
 

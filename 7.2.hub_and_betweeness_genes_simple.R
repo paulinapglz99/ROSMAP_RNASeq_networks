@@ -149,6 +149,16 @@ for (name in names(graphs)) {
   hub_nodes[[name]] <- V(graphs[[name]])[deg >= cutoff]$name
 }
 
+#Save hubs 
+
+# for (name in names(hub_nodes)) {
+#   filename_txt <- paste0("hubs_", name, ".txt")
+#   #filename_rds <- paste0("hubs_", name, ".rds")
+#   
+#   writeLines(hub_nodes[[name]], filename_txt)
+#   #saveRDS(hub_nodes[[name]], filename_rds)
+# }
+
 #What genes do both networks share?
 
 shared_hub_genes <- intersect(hub_nodes[[1]],  
