@@ -7,15 +7,9 @@
 #Libraries --- ---
 
 pacman::p_load("igraph", 
-               "tidyverse",
-               "clusterProfiler", 
-               "gridExtra", 
-               "biomaRt", 
-               "ggraph",
-               "tidyheatmaps")
-
-library("org.Hs.eg.db", character.only = TRUE)
-
+               "tidyverse", 
+               "cowplot") 
+            
 #Functions --- ---
 
 #Calculate modularity Q by module
@@ -52,8 +46,6 @@ graphAD <- read_graph(file =  'graphADnodes_membership.graphml',
 graphnoAD <- read_graph(file = 'graphnoADnodes_membership.graphml',
                         format = 'graphml')
 
-universe <- scan(file = "universe.txt", what = character())
-
 #Save graphs in a list
 
 graphLists <- list(AD = graphAD,
@@ -64,10 +56,18 @@ nodes_by_community_list <- lapply(graphLists, function(graph) {
   split(V(graph)$name, V(graph)$community)
 })
 
-#Modularity of all network --- ---
+#Count how many modules each network has --- ---
 
-modularity(graphAD, membership = V(graphAD)$community)
-modularity(graphnoAD, membership = V(graphnoAD)$community)
+sapply(nodes_by_community_list, length)
+# AD Control 
+# 68      71 
+
+#Global modularity of networks --- ---
+
+sapply(graphLists, function(g) modularity(g, membership = V(g)$community))
+# 
+# AD   Control 
+# 0.2825230 0.2027528 
 
 #Modularity Q by module --- ---
 
@@ -103,20 +103,20 @@ for (name in c("graphAD", "graphnoAD")) {
 }
 
 
-# Aplicar la función a cada grafo
+#Count how many hubs there are by community --- ---
 hubs_by_community <- mapply(count_hubs_in_communities, 
                                   nodes_by_community_list, 
-                                  hubs_list, 
+                                  hubs_nodes, 
                                   SIMPLIFY = FALSE)
 
 hubs_by_community_AD.df <- data.frame(
-  Module = names(hubs_count_by_community$AD),  # Nombres de las comunidades
-  Hubs_Count = unlist(hubs_count_by_community$AD)  # Conteo de hubs en cada comunidad
+  Module = names(hubs_by_community$AD),  # Nombres de las comunidades
+  Hubs_Count = unlist(hubs_by_community$AD)  # Conteo de hubs en cada comunidad
 )
 
 hubs_by_community_control.df <- data.frame(
-  Module = names(hubs_count_by_community$AD),  # Nombres de las comunidades
-  Hubs_Count = unlist(hubs_count_by_community$AD)  # Conteo de hubs en cada comunidad
+  Module = names(hubs_by_community$AD),  # Nombres de las comunidades
+  Hubs_Count = unlist(hubs_by_community$AD)  # Conteo de hubs en cada comunidad
 )
 
 #Merge with modularity by module
@@ -129,7 +129,7 @@ mod_df_AD_hubs<- mod_df_AD %>%
 
 mod_df_contr_hubs<- mod_df_control %>% 
   left_join(hubs_by_community_control.df, by = "Module") %>% 
-  mutate(Module = factor(Module,levels = sort(unique(as.numeric(Module)))),  #Order modules
+  mutate(Module = factor(Module,levels = sort(unique(as.numeric(Module))), ),  #Order modules
          Modularity = as.numeric(Modularity))
 
 mod_df_contr_hubs[is.na(mod_df_contr_hubs)] <- 0
@@ -197,13 +197,59 @@ Q_module_AD.ht <- ggplot(mod_df_AD_hubs,
        fill = "logQ")
 
 
-Q_grid <- cowplot::plot_grid(Q_module_control.ht, Q_module_AD.ht , labels = c('a', 'b'), ncol = 1)
+Q_grid <- cowplot::plot_grid(Q_module_control.ht, Q_module_AD.ht , labels = c('a', 'b'), ncol = 2)
 
-# ggsave("Q_grid.jpg", plot = Q_grid, 
-#        device = "jpg", 
-#        width = 15.5, 
-#        height = 6.5, 
-#        units = "in", 
+# ggsave("Q_grid.jpg", plot = Q_grid,
+#        device = "jpg",
+#        width = 6.5,
+#        height = 15.5,
+#        units = "in",
+#        dpi = 300)
+
+#I want a vertical version
+
+Q_module_control.ht <- ggplot(mod_df_contr_hubs, 
+                              aes(x = Graph , y = Module, fill = modularity_log)) +
+  geom_tile() +
+  geom_label(aes(label = Hubs_Count), 
+             #vjust = -1.5, 
+             size = 3, 
+             fill = "white", 
+             color = "black", 
+             label.size = 0.2) +
+  scale_fill_viridis(option="plasma")+
+  scale_y_discrete(limits = rev(unique(mod_df_contr_hubs$Module))) +  #Invert plot
+  theme_minimal() +
+  labs(x = " ",
+       y = " ",
+       fill = "logQ")
+
+#only AD
+
+Q_module_AD.ht <- ggplot(mod_df_AD_hubs, 
+                         aes(x =Graph , y = Module, fill = modularity_log)) +
+  geom_tile() +
+  geom_label(aes(label = Hubs_Count), 
+             #vjust = -1.5, 
+             size = 3, 
+             fill = "white", 
+             color = "black", 
+             label.size = 0.2) +
+  scale_fill_viridis(option="plasma")+
+  scale_y_discrete(limits = rev(unique(mod_df_AD_hubs$Module))) +  #Invert plot
+  theme_minimal() +
+  labs(x = "",
+       y = " ",
+       fill = "logQ")
+
+Q_grid <- cowplot::plot_grid(Q_module_control.ht, Q_module_AD.ht , labels = c('a', 'b'), ncol = 2)
+Q_grid
+
+# ggsave("Q_grid.jpg", plot = Q_grid,
+#        device = "jpg",
+#        width = 6.5,
+#        height = 15.5,
+#        units = "in",
 #        dpi = 300)
 
 #END
