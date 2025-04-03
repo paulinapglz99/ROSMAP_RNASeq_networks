@@ -22,7 +22,9 @@ pacman::p_load("igraph",
                "gridExtra", 
                "biomaRt", 
                "ggraph",
-               "tidyheatmaps")
+               "tidyheatmaps", 
+               "ggplotify", 
+               "cowplot")
 
 library("org.Hs.eg.db", character.only = TRUE)
 
@@ -38,24 +40,49 @@ jaccard_simplex <- function(a,b){
   length(intersect(a,b))/length(union(a,b))
 }
 
-# Calculate Jaccard Index 
+#Calculate Jaccard Index 
 jaccard_index <- function(set1, set2) {
   intersection <- length(intersect(set1, set2))
   union <- length(union(set1, set2))
   return(intersection / union)
 }
 
-#Create a function to calculate the assortativity per community
+#Calculate the assortativity per community
 calculate_assortativity <- function(graph, nodes) {
-  # Subgrafo para el módulo
+  #Subgraph by module
   subgraph <- induced_subgraph(graph, vids = nodes)
   
-  # Calcular la asortatividad por grado
+  #Assortativity
   assortativity_degree <- assortativity(subgraph, 
                                         types1 = degree(subgraph, mode = "all"))
   
   return(assortativity_degree)
 }
+
+#Define function that performs enrichment per module
+
+enricher <- function(nodes_by_community) {
+  enrichGO_result <- enrichGO(gene = nodes_by_community,
+                              OrgDb = org.Hs.eg.db, 
+                              universe = universe , 
+                              keyType = 'ENSEMBL',
+                              readable = TRUE,
+                              ont = "BP",          #type of GO(Biological Process (BP), cellular Component (CC), Molecular Function (MF)
+                              pvalueCutoff = 0.05, 
+                              qvalueCutoff = 0.10)
+  return(enrichGO_result)
+}
+
+#Define a function to replace NULL by an empty S4 object "enrichResult" to handle NULLs in the enrichment lists
+
+replace_null <- function(x) {
+  if (is.null(x)) {
+    return(new("enrichResult"))
+  } else {
+    return(x)
+  }
+}
+
 
 #Get data --- --- 
 
@@ -126,56 +153,58 @@ OverallEnrichedProcessJ <- jaccard_simplex(names(enrichment_fullnet_AD@geneSets)
 #This answers the question 2. How similar are the modules found in each network, in terms of the sets of associated biological functions?
   
 #Similarity of modules in terms of associated biological functions --- ---
-
-#Modularity algorithm 
-
-modularities <- sapply(X = graphLists, FUN = cluster_infomap)
-
-#Count modules
-
-len_mod <- sapply(X = modularities, FUN = length)
-# graphAD graphnoAD 
-# 67        72
-
-#Calculate Q score 
-
-Qscore <- sapply(modularities, FUN = modularity)
-Qscore
-# graphAD graphnoAD 
-# 0.2825230 0.2027528 
-
-#Calculate clustering coefficient
-
-clus_coe <- sapply(graphLists, FUN = transitivity)
-clus_coe
-# graphAD graphnoAD 
-# 0.5956005 0.6252799 
-
-#Split lists of nodes by module
-
-nodes_membership <- sapply(modularities, FUN = membership)
-
-#Create df
-nodes_membership_AD.df <- data.frame(ensembl_gene_id = names(nodes_membership$graphAD),  membership = nodes_membership$graphAD)
-
-nodes_membership_noAD.df <- data.frame(ensembl_gene_id = names(nodes_membership$graphnoAD),  membership = nodes_membership$graphnoAD)
-
-# Assign membership to the nodes of each network
-for (i in seq_along(graphLists)) {
-  V(graphLists[[i]])$community <- nodes_membership[[i]]
-}
+# 
+# #################### RUN THIS IF YOU STILL DONT HAVE THE PARTITIONS ####################
+# 
+# #Modularity algorithm 
+# 
+# modularities <- sapply(X = graphLists, FUN = cluster_infomap)
+# 
+# #Count modules
+# 
+# len_mod <- sapply(X = modularities, FUN = length)
+# # graphAD graphnoAD 
+# # 67        72
+# 
+# #Calculate Q score 
+# 
+# Qscore <- sapply(modularities, FUN = modularity)
+# Qscore
+# # graphAD graphnoAD 
+# # 0.2825230 0.2027528 
+# 
+# #Calculate clustering coefficient
+# 
+# clus_coe <- sapply(graphLists, FUN = function(g)(transitivity(g, weights= g$mut_info_norm)))
+# clus_coe
+# # graphAD graphnoAD 
+# # 0.5956005 0.6252799 
+# 
+# #Split lists of nodes by module
+# 
+# nodes_membership <- sapply(modularities, FUN = membership)
+# 
+# #As dataframe
+# nodes_membership_AD.df <- data.frame(ensembl_gene_id = names(nodes_membership$graphAD),  membership = nodes_membership$graphAD)
+# 
+# nodes_membership_noAD.df <- data.frame(ensembl_gene_id = names(nodes_membership$graphnoAD),  membership = nodes_membership$graphnoAD)
+# 
+# # Assign membership to the nodes of each network
+# for (i in seq_along(graphLists)) {
+#   V(graphLists[[i]])$community <- nodes_membership[[i]]
+# }
 
 #Save graphs  --- ----
 
 #Loop through each graph and export it with community membership as GraphML
-for (i in seq_along(graphLists)) {
-  # Generate filename for each graph (e.g., graphAD.graphml, graphnoAD.graphml)
-  graph_name <- ifelse(i == 1, "graphAD", "graphnoAD")
-  filename <- paste0(graph_name, "nodes_membership.graphml")
-
-  # Export graph to GraphML format
-  write_graph(graphLists[[i]], file = filename, format = "graphml")
-}
+# for (i in seq_along(graphLists)) {
+#   # Generate filename for each graph (e.g., graphAD.graphml, graphnoAD.graphml)
+#   graph_name <- ifelse(i == 1, "graphAD", "graphnoAD")
+#   filename <- paste0(graph_name, "nodes_membership.graphml")
+# 
+#   # Export graph to GraphML format
+#   write_graph(graphLists[[i]], file = filename, format = "graphml")
+# }
 
 #If you already have the networks
 
@@ -212,8 +241,8 @@ for (i in seq_along(modules_AD)) {
 }
 
 #Name rows and columns
-rownames(similarity_matrix) <- paste0("AD_", seq_along(modules_AD))
-colnames(similarity_matrix) <- paste0("Control_", seq_along(modules_noAD))
+rownames(similarity_matrix) <- paste0("AD ", seq_along(modules_AD))
+colnames(similarity_matrix) <- paste0("C ", seq_along(modules_noAD))
 
 similarity_matrix
 dim(similarity_matrix)
@@ -248,18 +277,21 @@ sim_heatmap.df <- as.data.frame(as.table(similarity_matrix)) %>%
   rename(Var1 = "module_AD", Var2 = "module_noAD", Freq = "similarity")
 
 #Plot heatmap
-sim_heatmap.p <- tidyheatmap(
+sim_heatmap.p <- as.ggplot(tidyheatmap(
   df = sim_heatmap.df,
   rows = module_AD,
   columns = module_noAD,
   values = similarity,
-  scale = "none", # No queremos escalado adicional
-  clustering_method = "average", # Opcional: Método de clustering
-  annotation_col = NULL,    # Opcional: Anotaciones en columnas si es necesario
-  annotation_row = NULL,     # Opcional: Anotaciones en filas si es necesario
+  scale = "none",
+  clustering_method = "average", 
+  annotation_col = NULL,    
+  annotation_row = NULL,    
   colors =  c("navy", "white", "firebrick"), 
-  main = "Gene module correspondence"
+  #main = "Gene module correspondence"
+)) +theme(
+  plot.margin = margin(t = 13, r = 20, b = 10, l = 10) # Top, Right, Bottom, Left
 )
+
 sim_heatmap.p
 
 # ggsave(
@@ -421,41 +453,17 @@ comparison_methods
 
 #I'd like to add names to lists of graphs again
 
-names(nodes_by_community_list)[1] <- "graphAD"
-names(nodes_by_community_list)[2] <- "graphnoAD"
+names(nodes_by_community_list)[1] <- "AD"
+names(nodes_by_community_list)[2] <- "Control"
 
 #Extract list of nodes by community 
 
-nodes_by_community_AD <- nodes_by_community_list[["graphAD"]]
+nodes_by_community_AD <- nodes_by_community_list[["AD"]]
 
-nodes_by_community_noAD <- nodes_by_community_list[["graphnoAD"]]
-
-#Define function that performs enrichment
-
-enricher <- function(nodes_by_community) {
-  enrichGO_result <- enrichGO(gene = nodes_by_community,
-                              OrgDb = org.Hs.eg.db, 
-                              universe = universe , 
-                              keyType = 'ENSEMBL',
-                              readable = TRUE,
-                              ont = "BP",          #type of GO(Biological Process (BP), cellular Component (CC), Molecular Function (MF)
-                              pvalueCutoff = 0.05, 
-                              qvalueCutoff = 0.10)
-  return(enrichGO_result)
-}
+nodes_by_community_noAD <- nodes_by_community_list[["Control"]]
 
 #These functions may print a " --> No gene can be mapped...." on the console. 
 #This happens when there are lists of genes that cannot be enriched. It will still generate an empty S4 object.
-
-# Define a function to replace NULL by an empty S4 object "enrichResult" to handle NULLs in the enrichment lists
-
-replace_null <- function(x) {
-  if (is.null(x)) {
-    return(new("enrichResult"))
-  } else {
-    return(x)
-  }
-}
 
 #Enrichment of graphAD modules
 
@@ -482,8 +490,8 @@ num_modules_noAD <- length(enriched_results_noAD)
 similarity_matrix_enri <- matrix(NA, nrow = num_modules_AD, ncol = num_modules_noAD)
 
 #Assign row and column names
-rownames(similarity_matrix_enri) <- paste("AD", 1:num_modules_AD, sep = "_")
-colnames(similarity_matrix_enri) <- paste("control", 1:num_modules_noAD, sep = "_")
+rownames(similarity_matrix_enri) <- paste("AD", 1:num_modules_AD, sep = " ")
+colnames(similarity_matrix_enri) <- paste("C", 1:num_modules_noAD, sep = " ")
 
 #Iterate to obtain similarity matrix 
 
@@ -517,19 +525,23 @@ print(module_pairs_enri)
 sim_enri_heatmap.df <- as.data.frame(as.table(similarity_matrix_enri)) %>%
   rename(Var1 = "module_AD", Var2 = "module_control", Freq = "similarity")
 
-# Heatmap
-sim_enri_heatmap.p <- tidyheatmap(
+#Heatmap
+sim_enri_heatmap.p <-  as.ggplot( tidyheatmap(
   df = sim_enri_heatmap.df,
   rows = module_AD,
   columns = module_control,
   values = similarity,
-  scale = "none", #No aditional scaling
-  clustering_method = "average", # Clustering method
+  scale = "none", 
+  clustering_method = "average", #Clustering method
   annotation_col = NULL,    #Column annotations
   annotation_row = NULL,     #Rows annotations
   colors =  c("navy", "white", "firebrick"), 
-  main = "Biological Processes module correspondence"
+  #main = " "
+)) +theme(
+  plot.margin = margin(t = 15, r = 20, b = 10, l = 10)
 )
+
+sim_enri_heatmap.p
 
 # ggsave(
 #   "sim_enri_genes_heatmap.pdf",
@@ -537,6 +549,25 @@ sim_enri_heatmap.p <- tidyheatmap(
 #   device = "pdf",
 #   width = 15,
 #   height = 10,
+#   units = "in",
+#   dpi = 300
+# )
+
+#Save grid
+
+heatmaps.g <- cowplot::plot_grid(sim_heatmap.p, sim_enri_heatmap.p, 
+                   labels = "auto",
+                   ncol = 1, 
+                   rel_heights = c(1, 1)
+                   )
+heatmaps.g
+
+# ggsave(
+#   "heatmap_grid.jpg",
+#   plot = heatmaps.g,
+#   device = "jpg",
+#   width = 12,
+#   height = 15,
 #   units = "in",
 #   dpi = 300
 # )

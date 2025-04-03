@@ -107,24 +107,24 @@ log_log_noAD <-  ggplot(noADdegree_freq, aes(x = degree, y = Prob)) +
                size = 1.2, formula = y ~ x) +  # Ajuste lineal con estilo modificado
   theme_minimal(base_size = 14) +  # Tamaño base de texto para mejor legibilidad
   theme(
-    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Centrar título y agrandar
-    axis.title = element_text(size = 14),  # Tamaño de títulos de ejes
-    axis.text = element_text(size = 12),   # Tamaño de etiquetas de ejes
-    panel.grid = element_line(size = 0.5, color = "grey80")  # Líneas de cuadrícula más sutiles
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  
+    axis.title = element_text(size = 14),  
+    axis.text = element_text(size = 12),   
+    panel.grid = element_line(size = 0.5, color = "grey80") 
   )
 
 log_grid <- grid.arrange(log_log_AD, log_log_noAD, ncol =2)
 
 #Find gammas
 
-# Se toman logaritmos de los valores de k y P(k)
+#Logarithms of the values of k and P(k) are taken.
 ADdegree_freq$log_degree <- log(ADdegree_freq$degree)
 ADdegree_freq$log_Prob <- log(ADdegree_freq$Prob)
 
-# Ajuste de regresión lineal en escala log-log
+#Log-log linear regression fitting
 ajuste_AD <- lm(log_Prob ~ log_degree, data = ADdegree_freq)
 
-# Mostrar los resultados del ajuste
+#Results
 summary(ajuste_AD)
 
 # Calcular el valor de gamma (la pendiente negativa de la regresión)

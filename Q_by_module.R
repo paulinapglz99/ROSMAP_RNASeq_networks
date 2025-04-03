@@ -1,6 +1,5 @@
 #transitivity_by_module.R
 
-
 # The AD network exhibits higher modularity (Q value), but there is no significant difference in the global degree distribution (K-S test).
 # The study should explore whether the modularity differences arise from local connection reorganization (e.g., increased hub genes within specific modules) rather than global topological changes.
 
